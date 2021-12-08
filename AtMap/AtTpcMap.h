@@ -32,48 +32,38 @@
 #include <fstream>
 #include <iostream>
 
-
-class AtTpcMap : public AtMap
-{
+class AtTpcMap : public AtMap {
 
 public:
+   AtTpcMap();
+   ~AtTpcMap();
 
-  AtTpcMap();
-  ~AtTpcMap();
+   virtual void Dump() override;
+   virtual void GenerateAtTpc() override;
+   virtual std::vector<Float_t> CalcPadCenter(Int_t PadRef) override;
+   virtual TH2Poly *GetAtTpcPlane() override;
+   virtual Int_t BinToPad(Int_t binval) override { return binval - 1; };
 
-  void Dump(); //pure virtual member
-  void GenerateATTPC();//pure virtual member
-  std::vector<Float_t> CalcPadCenter(Int_t PadRef);//pure virtual member
-  Int_t BinToPad(Int_t binval){return binval-1;}; //pure virtual member
- 
-  TH2Poly* GetATTPCPlane();//virtual member
-  
-  Int_t  fill_coord(int pindex, float padxoff, float padyoff, float triside, float fort);
+   Int_t fill_coord(int pindex, float padxoff, float padyoff, float triside, float fort);
 
-  
+   /*  friend ostream & operator << (ostream& out, const AtTpcMap& p){
 
+       std::vector<int>::iterator it;
 
-  /*  friend ostream & operator << (ostream& out, const AtTpcMap& p){
+       for(auto it=p.PadKey.begin();it!=p.PadKey.end();it++){
 
-      std::vector<int>::iterator it;
+       out<<"  This "<<p.PadKey[0]<<std::endl;
+       }
 
-      for(auto it=p.PadKey.begin();it!=p.PadKey.end();it++){
+       out<<" EN Node ID :"<<p.id<<" , ";
+       out<<" EN detector segment name :"<<p.detname<<" , ";
+       out<<" EN module ID :"<<p.modid<<" , ";
+       out<<" EN detector ID :"<<p.detID<<" , ";
+       out<<" EN VME module :"<<p.vme<<" , ";
+       out<<" EN Module status :"<<p.stat<<endl;
+       }*/
 
-      out<<"  This "<<p.PadKey[0]<<std::endl;
-      }
-
-      out<<" EN Node ID :"<<p.id<<" , ";
-      out<<" EN detector segment name :"<<p.detname<<" , ";
-      out<<" EN module ID :"<<p.modid<<" , ";
-      out<<" EN detector ID :"<<p.detID<<" , ";
-      out<<" EN VME module :"<<p.vme<<" , ";
-      out<<" EN Module status :"<<p.stat<<endl;
-      }*/
-
-
-
-  ClassDef(AtTpcMap,1);
-
+   ClassDefOverride(AtTpcMap, 1);
 };
 
 #endif

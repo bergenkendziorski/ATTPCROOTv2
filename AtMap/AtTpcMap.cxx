@@ -9,7 +9,9 @@
 
 #include <iostream>
 #include <cassert>
-
+#undef BOOST_MULTI_ARRAY_NO_GENERATORS
+#define BOOST_MULTI_ARRAY_NO_GENERATORS
+#include "boost/multi_array.hpp"
 
 using std::cout;
 using std::endl;
@@ -18,264 +20,240 @@ using std::endl;
 #define cYELLOW "\033[1;33m"
 #define cNORMAL "\033[0m"
 
-
 AtTpcMap::AtTpcMap()
 {
-  kIsParsed=0;
-  kGUIMode=0;
-  kDebug=0;
-  std::fill( AtPadCoord.data(), AtPadCoord.data()+AtPadCoord.num_elements() , 0);
-  std::cout<<" ATTPC Map initialized "<<std::endl;
-  std::cout<<" ATTPC Pad Coordinates container initialized "<<std::endl;
-  fPadInd = 0;
-  PadKey.clear();
-  fIniPads.clear();
-  hPlane = new TH2Poly();
+   kIsParsed = 0;
+   kGUIMode = 0;
+   kDebug = 0;
+   // AtPadCoord = // multiarray(boost::extents[10240][3][2]);
+   std::fill(AtPadCoord.data(), AtPadCoord.data() + AtPadCoord.num_elements(), 0);
+   std::cout << " ATTPC Map initialized " << std::endl;
+   std::cout << " ATTPC Pad Coordinates container initialized " << std::endl;
+   fPadInd = 0;
+   fIniPads.clear();
+   hPlane = new TH2Poly();
 }
 
 AtTpcMap::~AtTpcMap()
 {
-  //delete cATTPCPlane;
-  //delete hPlane;
+   // delete cATTPCPlane;
+   // delete hPlane;
 }
 
+void AtTpcMap::Dump()
+{
 
+   std::ofstream coordmap;
+   coordmap.open("coordmap.txt");
 
-void AtTpcMap::Dump(){
+   int values = 0;
+   for (index i = 0; i != 10240; ++i) {
+      coordmap << i << "  ";
+      for (index j = 0; j != 3; ++j) {
+         for (index k = 0; k != 2; ++k) {
+            std::cout << " ATTPC Triangular pad coordinates - Pad Index : " << i << "   X(" << j << ")  -  Y(" << k
+                      << ") :" << AtPadCoord[i][j][k] << std::endl;
+            coordmap << AtPadCoord[i][j][k] << "  ";
+         } // k
+      }    // j
 
-  std::ofstream coordmap;
-  coordmap.open("coordmap.txt");
+      coordmap << std::endl;
 
-  int values = 0;
-  for(index i = 0; i != 10240; ++i){
-    coordmap<<i<<"  ";
-    for(index j = 0; j != 3; ++j){
-      for(index k = 0; k != 2; ++k){
-	std::cout<<" ATTPC Triangular pad coordinates - Pad Index : "<<i<<"   X("<<j<<")  -  Y("<<k<<") :"<<AtPadCoord[i][j][k]<<std::endl;
-	coordmap<<AtPadCoord[i][j][k]<<"  ";
-      }//k
-    }//j
+   } // i
 
-    coordmap<<std::endl;
-
-  }//i
-
-  coordmap.close();
-
+   coordmap.close();
 }
 
-void AtTpcMap::GenerateATTPC(){
+void AtTpcMap::GenerateAtTpc()
+{
 
+   std::cout << " ATTPC Map : Generating the map geometry of the ATTPC " << std::endl;
+   // Local variables
+   Float_t pads_in_half_hex;
+   Float_t pads_in_hex;
+   Float_t row_length = 0;
+   Float_t pads_in_half_row = 0;
+   Int_t pads_out_half_hex = 0;
+   Int_t pads_in_row = 0;
+   Int_t ort = 0;
+   Float_t pad_x_off = 0;
+   Float_t pad_y_off = 0;
+   Float_t tmp_pad_x_off = 0;
+   Float_t tmp_pad_y_off = 0;
 
-  std::cout<<" ATTPC Map : Generating the map geometry of the ATTPC "<<std::endl;
-  // Local variables
-  Float_t pads_in_half_hex;
-  Float_t pads_in_hex;
-  Float_t row_length = 0;
-  Float_t pads_in_half_row = 0;
-  Int_t pads_out_half_hex = 0 ;
-  Int_t pads_in_row = 0;
-  Int_t ort = 0;
-  Float_t pad_x_off = 0;
-  Float_t pad_y_off = 0;
-  Float_t tmp_pad_x_off = 0;
-  Float_t tmp_pad_y_off = 0;
+   Float_t small_z_spacing = 2 * 25.4 / 1000.;
+   Float_t small_tri_side = 184. * 25.4 / 1000.;
+   Double_t umega_radius = 10826.772 * 25.4 / 1000.;
+   Float_t beam_image_radius = 4842.52 * 25.4 / 1000.;
+   Int_t pad_index = 0;
+   Int_t pad_index_aux = 0;
 
-  Float_t small_z_spacing = 2*25.4/1000.;
-  Float_t small_tri_side = 184.*25.4/1000.;
-  Double_t umega_radius = 10826.772*25.4/1000.;
-  Float_t beam_image_radius = 4842.52*25.4/1000.;
-  Int_t pad_index = 0;
-  Int_t pad_index_aux=0;
+   Float_t small_x_spacing = 2. * small_z_spacing / TMath::Sqrt(3.);
+   Float_t small_y_spacing = small_x_spacing * TMath::Sqrt(3.);
+   Float_t dotted_s_tri_side = 4. * small_x_spacing + small_tri_side;
+   Float_t dotted_s_tri_hi = dotted_s_tri_side * TMath::Sqrt(3.) / 2.;
+   Float_t dotted_l_tri_side = 2. * dotted_s_tri_side;
+   Float_t dotted_l_tri_hi = dotted_l_tri_side * TMath::Sqrt(3.) / 2.;
+   Float_t large_x_spacing = small_x_spacing;
+   Float_t large_y_spacing = small_y_spacing;
+   Float_t large_tri_side = dotted_l_tri_side - 4. * large_x_spacing;
+   Float_t large_tri_hi = dotted_l_tri_side * TMath::Sqrt(3.) / 2.;
+   // Float_t row_len_s = 2**TMath::Ceil(TMath::Log(beam_image_radius/dotted_s_tri_side)/TMath::Log(2.0));
+   Float_t row_len_s = pow(2, TMath::Ceil(TMath::Log(beam_image_radius / dotted_s_tri_side) / TMath::Log(2.0)));
+   Float_t row_len_l = TMath::Floor(umega_radius / dotted_l_tri_hi);
 
-  Float_t small_x_spacing = 2. * small_z_spacing / TMath::Sqrt(3.);
-  Float_t small_y_spacing = small_x_spacing * TMath::Sqrt(3.);
-  Float_t dotted_s_tri_side = 4. * small_x_spacing + small_tri_side;
-  Float_t dotted_s_tri_hi = dotted_s_tri_side * TMath::Sqrt(3.)/2.;
-  Float_t dotted_l_tri_side = 2. * dotted_s_tri_side;
-  Float_t dotted_l_tri_hi = dotted_l_tri_side * TMath::Sqrt(3.)/2.;
-  Float_t large_x_spacing = small_x_spacing;
-  Float_t large_y_spacing = small_y_spacing;
-  Float_t large_tri_side = dotted_l_tri_side - 4.*large_x_spacing;
-  Float_t large_tri_hi = dotted_l_tri_side * TMath::Sqrt(3.)/2.;
-  //Float_t row_len_s = 2**TMath::Ceil(TMath::Log(beam_image_radius/dotted_s_tri_side)/TMath::Log(2.0));
-  Float_t row_len_s = pow(2,TMath::Ceil(TMath::Log(beam_image_radius/dotted_s_tri_side)/TMath::Log(2.0)));
-  Float_t row_len_l = TMath::Floor(umega_radius/dotted_l_tri_hi);
+   Float_t xoff = 0.;
+   Float_t yoff = 0.;
 
-  Float_t xoff = 0.;
-  Float_t yoff = 0.;
+   for (Int_t j = 0; j < row_len_l; j++) {
+      pads_in_half_hex = 0;
+      pads_in_hex = 0;
+      // row_length = TMath::Abs(sqrt(umega_radius**2 - (j*dotted_l_tri_hi + dotted_l_tri_hi/2.)**2));
+      row_length = TMath::Abs(sqrt(pow(umega_radius, 2) - pow((j * dotted_l_tri_hi + dotted_l_tri_hi / 2.), 2)));
 
+      if (j < row_len_s / 2.) {
 
+         pads_in_half_hex = (2 * row_len_s - 2 * j) / 4.;
+         pads_in_hex = 2 * row_len_s - 1. - 2. * j;
 
-  for(Int_t j =0;j<row_len_l;j++){
+      } // if row_len_s
 
-    pads_in_half_hex = 0;
-    pads_in_hex = 0;
-    //row_length = TMath::Abs(sqrt(umega_radius**2 - (j*dotted_l_tri_hi + dotted_l_tri_hi/2.)**2));
-    row_length = TMath::Abs(sqrt(pow(umega_radius,2) - pow((j*dotted_l_tri_hi + dotted_l_tri_hi/2.),2)));
+      pads_in_half_row = row_length / dotted_l_tri_side;
+      pads_out_half_hex = static_cast<Int_t>(TMath::Nint(2 * (pads_in_half_row - pads_in_half_hex)));
+      pads_in_row = 2 * pads_out_half_hex + 4 * pads_in_half_hex - 1;
 
-    if(j<row_len_s/2.){
+      ort = 1;
 
-      pads_in_half_hex = (2*row_len_s - 2*j)/4.;
-      pads_in_hex = 2*row_len_s - 1. - 2.*j;
+      for (Int_t i = 0; i < pads_in_row; i++) {
 
+         // set initial ort
+         if (i == 0) {
+            if (j % 2 == 0)
+               ort = -1;
+            if (((pads_in_row - 1) / 2) % 2 == 1)
+               ort = -ort;
 
-    }//if row_len_s
+         } // i==0
+         else
+            ort = -ort;
 
-    pads_in_half_row = row_length /dotted_l_tri_side;
-    pads_out_half_hex = static_cast<Int_t> (TMath::Nint(2*(pads_in_half_row-pads_in_half_hex)));
-    pads_in_row = 2 * pads_out_half_hex + 4 * pads_in_half_hex - 1;
+         pad_x_off = -(pads_in_half_hex + pads_out_half_hex / 2.) * dotted_l_tri_side + i * dotted_l_tri_side / 2. +
+                     2. * large_x_spacing + xoff;
 
-    ort = 1;
+         if (i < pads_out_half_hex || i > (pads_in_hex + pads_out_half_hex - 1) || j > (row_len_s / 2. - 1)) {
 
+            pad_y_off = j * dotted_l_tri_hi + large_y_spacing + yoff;
+            if (ort == -1)
+               pad_y_off += large_tri_hi;
 
+            fill_coord(pad_index, pad_x_off, pad_y_off, large_tri_side, ort);
+            pad_index += 1;
 
-    for(Int_t i =0;i<pads_in_row;i++){
+         } // if
+         else {
 
-      if(i==0){
+            pad_y_off = j * dotted_l_tri_hi + large_y_spacing + yoff;
+            if (ort == -1)
+               pad_y_off = j * dotted_l_tri_hi + 2 * dotted_s_tri_hi - small_y_spacing + yoff;
+            fill_coord(pad_index, pad_x_off, pad_y_off, small_tri_side, ort);
 
-	if(j%2==0) ort = -1;
-	if(( (pads_in_row-1)/2)%2 == 1) ort = -ort;
+            pad_index += 1;
+            tmp_pad_x_off = pad_x_off + dotted_s_tri_side / 2.;
+            tmp_pad_y_off = pad_y_off + ort * dotted_s_tri_hi - 2 * ort * small_y_spacing;
+            fill_coord(pad_index, tmp_pad_x_off, tmp_pad_y_off, small_tri_side, -ort);
 
-      }//i==0
-      else ort = -ort;
+            pad_index += 1;
+            tmp_pad_y_off = pad_y_off + ort * dotted_s_tri_hi;
+            fill_coord(pad_index, tmp_pad_x_off, tmp_pad_y_off, small_tri_side, ort);
 
+            pad_index += 1;
+            tmp_pad_x_off = pad_x_off + dotted_s_tri_side;
+            fill_coord(pad_index, tmp_pad_x_off, pad_y_off, small_tri_side, ort);
+            pad_index += 1;
+         }
 
+      } // pads_in_row loop
 
-      pad_x_off = -(pads_in_half_hex + pads_out_half_hex/2.)*dotted_l_tri_side + i*dotted_l_tri_side/2. + 2.*large_x_spacing + xoff;
+   } // row_len_l
 
-      if(i<pads_out_half_hex || i> (pads_in_hex + pads_out_half_hex - 1) || j> (row_len_s/2. -1)){
-
-	pad_y_off = j*dotted_l_tri_hi + large_y_spacing + yoff;
-	if(ort==-1) pad_y_off+=large_tri_hi;
-	fill_coord(pad_index,pad_x_off,pad_y_off,large_tri_side,ort);
-	pad_index+=1;
-
-
-      }//if
-      else{
-
-	pad_y_off = j*dotted_l_tri_hi + large_y_spacing + yoff;
-	if(ort==-1) pad_y_off = j*dotted_l_tri_hi + 2*dotted_s_tri_hi - small_y_spacing+yoff;
-	fill_coord(pad_index,pad_x_off, pad_y_off, small_tri_side, ort);
-	pad_index += 1;
-	tmp_pad_x_off = pad_x_off + dotted_s_tri_side/2.;
-	tmp_pad_y_off = pad_y_off + ort*dotted_s_tri_hi - 2*ort*small_y_spacing;
-	fill_coord(pad_index,tmp_pad_x_off, tmp_pad_y_off, small_tri_side, -ort);
-	pad_index += 1;
-	tmp_pad_y_off = pad_y_off+ort*dotted_s_tri_hi;
-	fill_coord(pad_index,tmp_pad_x_off, tmp_pad_y_off, small_tri_side, ort);
-	pad_index += 1;
-	tmp_pad_x_off = pad_x_off + dotted_s_tri_side;
-	fill_coord(pad_index,tmp_pad_x_off, pad_y_off, small_tri_side, ort);
-	pad_index += 1;
-
-
+   for (Int_t i = 0; i < pad_index; i++) {
+      for (Int_t j = 0; j < 3; j++) {
+         AtPadCoord[i + pad_index][j][0] = AtPadCoord[i][j][0];
+         AtPadCoord[i + pad_index][j][1] = -AtPadCoord[i][j][1];
       }
+      pad_index_aux++;
+   }
 
-
-    }//pads_in_row loop
-
-
-  }//row_len_l
-
-  for(Int_t i =0;i<pad_index;i++){
-    for(Int_t j=0;j<3;j++){
-      AtPadCoord[i+pad_index][j][0]=AtPadCoord[i][j][0];
-      AtPadCoord[i+pad_index][j][1]=-AtPadCoord[i][j][1];
-
-
-    }
-    pad_index_aux++;
-  }
-
-
-
-  fPadInd = pad_index + pad_index_aux;
-
+   fPadInd = pad_index + pad_index_aux;
 }
 
-
-Int_t AtTpcMap::fill_coord(int pindex, float padxoff, float padyoff, float triside, float fort){
-
-
-  AtPadCoord[pindex][0][0] = padxoff;
-  AtPadCoord[pindex][0][1] = padyoff;
-  AtPadCoord[pindex][1][0] = padxoff + triside/2.;
-  AtPadCoord[pindex][1][1] = padyoff + fort*triside*TMath::Sqrt(3.)/2.;
-  AtPadCoord[pindex][2][0] = padxoff + triside;
-  AtPadCoord[pindex][2][1] = padyoff;
-
-
+Int_t AtTpcMap::fill_coord(int pindex, float padxoff, float padyoff, float triside, float fort)
+{
+   AtPadCoord[pindex][0][0] = padxoff;
+   AtPadCoord[pindex][0][1] = padyoff;
+   AtPadCoord[pindex][1][0] = padxoff + triside / 2.;
+   AtPadCoord[pindex][1][1] = padyoff + fort * triside * TMath::Sqrt(3.) / 2.;
+   AtPadCoord[pindex][2][0] = padxoff + triside;
+   AtPadCoord[pindex][2][1] = padyoff;
+   return 0;
 }
 
-TH2Poly* AtTpcMap::GetATTPCPlane(){
+TH2Poly *AtTpcMap::GetAtTpcPlane()
+{
 
-  if(fPadInd == 0){
+   if (fPadInd == 0) {
 
-    std::cout<<" AtTpcMap::GetATTPCPlane Error : Pad plane has not been generated - Exiting... "<<std::endl;
+      std::cout << " AtTpcMap::GetATTPCPlane Error : Pad plane has not been generated - Exiting... " << std::endl;
 
-    return NULL;
+      return NULL;
+   }
 
-  }
+   hPlane->SetName("ATTPC_Plane");
+   hPlane->SetTitle("ATTPC_Plane");
 
+   for (Int_t i = 0; i < fPadInd; i++) {
 
+      Double_t px[] = {AtPadCoord[i][0][0], AtPadCoord[i][1][0], AtPadCoord[i][2][0], AtPadCoord[i][0][0]};
+      Double_t py[] = {AtPadCoord[i][0][1], AtPadCoord[i][1][1], AtPadCoord[i][2][1], AtPadCoord[i][0][1]};
+      hPlane->AddBin(4, px, py);
+   }
 
-  hPlane->SetName("ATTPC_Plane");
-  hPlane->SetTitle("ATTPC_Plane");
+   hPlane->ChangePartition(500, 500);
 
-  for(Int_t i=0;i<fPadInd;i++){
+   if (kGUIMode) {
+      cAtTPCPlane = new TCanvas("cATTPCPlane", "cATTPCPlane", 1000, 1000);
+      gStyle->SetPalette(1);
+      hPlane->Draw("col");
+   }
 
-    Double_t px[]={AtPadCoord[i][0][0],AtPadCoord[i][1][0],AtPadCoord[i][2][0],AtPadCoord[i][0][0]};
-    Double_t py[]={AtPadCoord[i][0][1],AtPadCoord[i][1][1],AtPadCoord[i][2][1],AtPadCoord[i][0][1]};
-    hPlane->AddBin(4,px,py);
-
-  }
-
-  hPlane->ChangePartition(500,500);
-
-  if(kGUIMode){
-    cATTPCPlane = new TCanvas("cATTPCPlane","cATTPCPlane",1000,1000);
-    gStyle->SetPalette(1);
-    hPlane->Draw("col");
-  }
-
-  return hPlane;
+   return hPlane;
 }
 
+std::vector<Float_t> AtTpcMap::CalcPadCenter(Int_t PadRef)
+{
 
-std::vector<Float_t> AtTpcMap::CalcPadCenter(Int_t PadRef){
+   std::vector<Float_t> PadCenter = {-9999, -9999};
+   PadCenter.reserve(2);
 
-  std::vector<Float_t> PadCenter={-9999,-9999};
-  PadCenter.reserve(2);
+   if (!fPadInd || !kIsParsed) {
 
+      std::cout << " AtTpcMap::CalcPadCenter Error : Pad plane has not been generated or parsed " << std::endl;
+      return PadCenter;
+   }
 
-  if(!fPadInd || !kIsParsed){
+   if (PadRef != -1) { // Boost multi_array crashes with a negative index
 
-    std::cout<<" AtTpcMap::CalcPadCenter Error : Pad plane has not been generated or parsed "<<std::endl;
-    return PadCenter;
+      Float_t x = (AtPadCoord[PadRef][0][0] + AtPadCoord[PadRef][1][0] + AtPadCoord[PadRef][2][0]) / 3.;
+      PadCenter[0] = x;
+      Float_t y = (AtPadCoord[PadRef][0][1] + AtPadCoord[PadRef][1][1] + AtPadCoord[PadRef][2][1]) / 3.;
+      PadCenter[1] = y;
+      return PadCenter;
 
-  }
+   } else {
 
-  if(PadRef!=-1){ //Boost multi_array crashes with a negative index
-
-
-    Float_t x = (AtPadCoord[PadRef][0][0] + AtPadCoord[PadRef][1][0] + AtPadCoord[PadRef][2][0])/3.;
-    PadCenter[0]=x;
-    Float_t y = (AtPadCoord[PadRef][0][1] + AtPadCoord[PadRef][1][1] + AtPadCoord[PadRef][2][1])/3.;
-    PadCenter[1]=y;
-    return PadCenter;
-
-  }else{
-
-    if(kDebug) std::cout<<" AtTpcMap::CalcPadCenter Error : Pad not found"<<std::endl;
-    return PadCenter;
-
-  }
-
+      if (kDebug)
+         std::cout << " AtTpcMap::CalcPadCenter Error : Pad not found" << std::endl;
+      return PadCenter;
+   }
 }
-
-
-
-
 ClassImp(AtTpcMap)

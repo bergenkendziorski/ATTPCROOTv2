@@ -8,31 +8,31 @@
 #ifndef ATGADGETIIMAP_H
 #define ATGADGETIIMAP_H
 
-
 #include <boost/multi_array.hpp>
 
-
 #include "AtMap.h"
+#include "unordered_map"
 
-
-
-class AtGadgetIIMap : public AtMap
-{
+class AtGadgetIIMap : public AtMap {
 
 public:
+   AtGadgetIIMap();
+   ~AtGadgetIIMap();
 
-  AtGadgetIIMap();
-  ~AtGadgetIIMap();
+   void Dump() override;                                      // pure virtual member
+   void GenerateAtTpc() override;                             // pure virtual member
+   std::vector<Float_t> CalcPadCenter(Int_t PadRef) override; // pure virtual member
+   Int_t BinToPad(Int_t binval) override;                     // pure virtual member
 
-  void Dump(); //pure virtual member
-  void GenerateATTPC();//pure virtual member
-  std::vector<Float_t> CalcPadCenter(Int_t PadRef);//pure virtual member
-  Int_t BinToPad(Int_t binval){return binval-1;}; //pure virtual member
+   TH2Poly *GetAtTpcPlane() override; // virtual member
 
-  TH2Poly* GetATTPCPlane();//virtual member
+   void SetBinToPadMap();
 
-ClassDef(AtGadgetIIMap,1);
+private:
+   std::unordered_map<Int_t, Int_t> fBinToPadTable;
+   std::unordered_map<Int_t, Int_t>::iterator fBinToPadTableIt;
 
+   ClassDefOverride(AtGadgetIIMap, 1);
 };
- 
+
 #endif
