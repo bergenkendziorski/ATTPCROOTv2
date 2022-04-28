@@ -38,11 +38,17 @@ void run_eve(int runNum = 210, TString OutputDataFile = "./output/output.reco_di
 
    AtEventManager *eveMan = new AtEventManager();
    AtEventDrawTask *eve = new AtEventDrawTask();
+   auto fAtMapPtr = std::make_shared<AtTpcMap>();
+   TString mapFile = gSystem->Getenv("VMCWORKDIR");
+   mapFile += "/scripts/e12014_pad_mapping.xml";
+   fAtMapPtr->ParseXMLMap(mapFile.Data());
+
    eve->Set3DHitStyleBox();
    eve->SetMultiHit(100); // Set the maximum number of multihits in the visualization
+   eve->SetMap(fAtMapPtr);
    // eve->SetSaveTextData();
-   //eve->SetRawEventBranch("AtRawEventSubtracted");
-   eve->SetRawEventBranch("AtRawEventFFTRaw");
+   // eve->SetRawEventBranch("AtRawEventSubtracted");
+   eve->SetRawEventBranch("AtRawEvent");
    eve->SetEventBranch("AtEventH");
 
    eveMan->AddTask(eve);

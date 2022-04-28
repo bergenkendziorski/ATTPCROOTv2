@@ -1,17 +1,21 @@
-#include "../helper.h"
-#include "../AtGenerators/AtCSVReader.h"
-#include "TString.h"
-#include "TFile.h"
-#include "TFitResultPtr.h"
-#include "TGraph.h"
-#include <map>
-#include <fstream>
+#include <TFile.h>
+#include <TFitResult.h>
+#include <TFitResultPtr.h>
+#include <TGraph.h>
+#include <TH1.h>
+#include <TH2.h>
+#include <TString.h>
 
-TString filePath = "/mnt/analysis/e12014/TPC/unpacked/run_%04d.root";
+#include <fstream>
+#include <map>
+
+#include "../helper.h"
+#include "/mnt/simulations/attpcroot/adam/ATTPCROOTv2/AtTools/AtCSVReader.h"
+TString filePath = "/mnt/analysis/e12014/TPC/filterTesting/run_%04d.root";
 using voltChPair = std::pair<double, double>;
 
 /***** "public" funtions ******/
-/* Creates two files
+/* Creates four files
  * output/run{RunNum}.root: histogram of the max of each pad
  * output/run{RunNum}.csv: csv of padID and mean for each pad
  */
@@ -20,19 +24,20 @@ void calibrateAllPads(std::map<int, double> &runAndVoltage);
 void calibrateAllPads();
 
 /******* "private" variables ******/
-//Used for getting ch value for a single pulser run
-std::map<int, TH1F*> padHist;
-std::map<int, TH2F*> corrHist;
+// Used for getting ch value for a single pulser run
+std::map<int, TH1F *> padHist;
+std::map<int, TH2F *> corrHist;
 std::vector<std::pair<int, double>> maxPeak;
-//Used for getting calibration from multiple runs
+// Used for getting calibration from multiple runs
 std::map<int, std::vector<voltChPair>> runPadMean; //[chNum] -> {voltage, ch}
 std::map<int, std::vector<double>> fitParameters;
-std::map<int, TGraph*> fitGraphMap;
+std::map<int, double> fitChi2;
+std::map<int, TGraph *> fitGraphMap;
 
 /******* "private" functions ******/
 void fillHistograms();
 void fitHistograms();
-TFitResultPtr& fitHistogram(TH1F* hist, int max, int range);
+TFitResultPtr &fitHistogram(TH1F *hist, int max, int range);
 void writeResults(int runNum);
 void fillPad(int padNum, double max);
 void fillCorr(int padNum, double max, double comp);
@@ -49,10 +54,10 @@ void saveCalibration();
 void getMaxOfAllPads(int runNum)
 {
    clear();
-   
+
    // Load the run
-   loadRun(TString::Format(filePath, runNum), "AtRawEvent", "AtEventH");
-   
+   loadRun(TString::Format(filePath, runNum), "AtRawEventFFT", "AtRawEventFFT", "AtEventFFT", "AtEventFFT");
+
    fillHistograms();
    fitHistograms();
    writeResults(runNum);
@@ -106,15 +111,12 @@ void fillCorr(int padNum, double max, double comp)
 
 void fillHistograms()
 {
-   while(nextEvent())
-   {
+   while (nextEvent()) {
       std::cout << "Looking at event: " << reader->GetCurrentEntry() << std::endl;
-      
-      for(const auto &hit : *(eventPtr->GetHitArray()))
-      	 fillPad(hit.GetHitPadNum(), hit.GetCharge());
-      
-   }
 
+      for (const auto &hit : (eventPtr->GetHitArray()))
+         fillPad(hit.GetPadNum(), hit.GetCharge());
+   }
 }
 
 void writeResults(int runNum)
@@ -175,19 +177,17 @@ void clear()
 
 void loadFittedData(const std::map<int, double> &runAndVoltage)
 {
-   for(auto &pair : runAndVoltage)
-   {
+   for (auto &pair : runAndVoltage) {
       auto volt = pair.second;
-      std::ifstream csv(TString::Format("output/run_%d.csv", pair.first));
+      std::ifstream csv(TString::Format("output/filtered/run_%d.csv", pair.first));
 
-      //CSVRange from AtCSVReader.h
-      for(auto &row : CSVRange<double>(csv))
-      {
-	 int padNum = row[0];
-	 double ch = row[1];
-	 if(runPadMean.find(padNum) == runPadMean.end())
-	    runPadMean.insert({padNum, std::vector<voltChPair>()});
-	 runPadMean[padNum].emplace_back(voltChPair(volt, ch));
+      // CSVRange from AtCSVReader.h
+      for (auto &row : CSVRange<double>(csv)) {
+         int padNum = row[0];
+         double ch = row[1];
+         if (runPadMean.find(padNum) == runPadMean.end())
+            runPadMean.insert({padNum, std::vector<voltChPair>()});
+         runPadMean[padNum].emplace_back(voltChPair(volt, ch));
       }
    }
 }
@@ -217,20 +217,20 @@ void fillGraphs()
 }
 void fitGraphs()
 {
-   for(auto &graphPair : fitGraphMap)
-   {
+   for (auto &graphPair : fitGraphMap) {
       auto padNum = graphPair.first;
       auto graph = graphPair.second;
       auto fit = graph->Fit("pol1", "SQ");
-      if((Int_t)fit != 0)
-      {
-	 std::cout << "Failed to fit pad: " << padNum << std::endl;
-	 continue;
+      if ((Int_t)fit != 0) {
+         std::cout << "Failed to fit pad: " << padNum << std::endl;
+         continue;
       }
-      
+
       fitParameters.insert({graphPair.first, {}});
       fitParameters[padNum].emplace_back(fit->Parameter(0));
       fitParameters[padNum].emplace_back(fit->Parameter(1));
+      fitChi2[padNum] = fit->Chi2() / fit->Ndf();
+      fitChi2[padNum] = graph->GetCorrelationFactor();
    }
 }
 void saveCalibration()
@@ -239,22 +239,24 @@ void saveCalibration()
    TH1F gainHist("gainHist", "Pad Gains", 1000, 0, 1);
    TH1F pedestalHist("pedestalHist", "Pad Pedestals", 200, -100, 100);
 
-   for(auto &pair : fitParameters)
-   {
+   for (auto &pair : fitParameters) {
       csv << pair.first << "," << pair.second[0] << "," << pair.second[1] << std::endl;
       gainHist.Fill(pair.second[1]);
       pedestalHist.Fill(pair.second[0]);
    }
    csv.close();
-   
-   //Create output file
+
+   std::ofstream csvChi2("output/chi2.csv");
+   for (auto &[padNum, chi2] : fitChi2)
+      csvChi2 << padNum << "," << chi2 << std::endl;
+   csvChi2.close();
+
+   // Create output file
    TFile *oFile = new TFile("output/calibration.root", "RECREATE");
    oFile->cd();
-   for(auto &pair : fitGraphMap)
+   for (auto &pair : fitGraphMap)
       pair.second->Write(TString::Format("pad_%d", pair.first));
    gainHist.Write();
    pedestalHist.Write();
    oFile->Close();
-
-
 }
