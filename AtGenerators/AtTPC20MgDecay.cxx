@@ -1,27 +1,25 @@
 #include "AtTPC20MgDecay.h"
 
-#include "FairPrimaryGenerator.h"
-#include "FairRootManager.h"
-#include "FairLogger.h"
-#include "FairMCEventHeader.h"
+#include <FairLogger.h>
+#include <FairPrimaryGenerator.h>
 
-#include "FairRunSim.h"
-#include "FairRunAna.h"
+#include <TDatabasePDG.h>
+#include <TMath.h>
+#include <TParticlePDG.h>
+#include <TRandom.h>
 
-#include "TDatabasePDG.h"
-#include "TParticlePDG.h"
-
-#include "TRandom.h"
-#include "TMath.h"
+#include <cmath>
+#include <iostream>
+#include <map>
 
 // -----   Default constructor   ------------------------------------------
 AtTPC20MgDecay::AtTPC20MgDecay()
-   : fOnlyAPBranch(0), fBoxVtxIsSet(0), fX(0), fY(0), fZ(0), fX1(0), fY1(0), fZ1(0), fX2(0), fY2(0), fZ2(0)
+   : fOnlyAPBranch(false), fBoxVtxIsSet(false), fX(0), fY(0), fZ(0), fX1(0), fY1(0), fZ1(0), fX2(0), fY2(0), fZ2(0)
 {
 }
 
 // -----   Destructor   ---------------------------------------------------
-AtTPC20MgDecay::~AtTPC20MgDecay() {}
+AtTPC20MgDecay::~AtTPC20MgDecay() = default;
 
 Bool_t AtTPC20MgDecay::Init()
 {
@@ -54,10 +52,10 @@ Bool_t AtTPC20MgDecay::ReadEvent(FairPrimaryGenerator *primGen)
    TParticlePDG *alphaParticle = pdgBase->GetParticle(alphaPDGID);
    if (!protonParticle)
       LOG(fatal) << "AtTPC20MgDecay: PDG code " << protonPDGID << " (proton) not defined.";
-   Double32_t protonMass = protonParticle->Mass();
+   Double32_t protonMass = protonParticle->Mass(); // NOLINT
    if (!alphaParticle)
       LOG(fatal) << "AtTPC20MgDecay: PDG code " << alphaPDGID << " (alpha) not defined.";
-   Double32_t alphaMass = alphaParticle->Mass();
+   Double32_t alphaMass = alphaParticle->Mass(); // NOLINT
 
    std::cout << " protonMass: " << protonMass << std::endl;
    std::cout << "alphaMass: " << alphaMass << std::endl;

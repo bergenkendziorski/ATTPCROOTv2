@@ -1,19 +1,22 @@
-#include <iostream>
+#include <Riostream.h>
+#include <TApplication.h>
+#include <TAxis.h>
+#include <TBranch.h>
+#include <TFile.h>
+#include <TGraph.h>
+#include <TH1F.h>
+#include <TMath.h>
+#include <TROOT.h>
+#include <TRint.h>
+#include <TTree.h>
+
+#include "TRelativisticKinematics.hh"
+
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include <cmath>
-#include "Riostream.h"
-#include "TROOT.h"
-#include "TFile.h"
-#include "TTree.h"
-#include "TBranch.h"
-#include "TGraph.h"
-#include "TApplication.h"
-#include "TRint.h"
-#include "TMath.h"
-#include "TAxis.h"
-#include "TH1F.h"
-#include "TRelativisticKinematics.hh"
+#include <iostream>
+
 #include "TRelativisticKinematics.cxx"
 //#include "TRelativisticDecay.hh"
 //#include "TRelativisticDecay.cxx"
@@ -69,10 +72,10 @@ int Mainrel()
    int ZD2 = 2; // charge of the daugther 2
    char *ElD2 = new char[2];
 
-   double ex1 = 0;    // excitation energy of the incident particle
-   double ex2 = 0;    // excitation energy of the target
-   double ex3 = 0.0;  // excitation energy of the scattered particle
-   double ex4 = 0.0;  // excitation energy of the recoil
+   double ex1 = 0;   // excitation energy of the incident particle
+   double ex2 = 0;   // excitation energy of the target
+   double ex3 = 0.0; // excitation energy of the scattered particle
+   double ex4 = 0.0; // excitation energy of the recoil
 
    double tbt = 11.0; // incident energy (total Lab energy in MeV)
 

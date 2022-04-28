@@ -3,36 +3,36 @@
 #define R__DICTIONARY_FILENAME G__MCsrc_cuda
 
 /*******************************************************************/
+#include <assert.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
-#include <assert.h>
 #define G__DICTIONARY
-#include "RConfig.h"
-#include "TClass.h"
-#include "TDictAttributeMap.h"
-#include "TInterpreter.h"
-#include "TROOT.h"
-#include "TBuffer.h"
-#include "TMemberInspector.h"
-#include "TInterpreter.h"
-#include "TVirtualMutex.h"
-#include "TError.h"
+#include <RConfig.h>
+#include <TBuffer.h>
+#include <TClass.h>
+#include <TDictAttributeMap.h>
+#include <TError.h>
+#include <TInterpreter.h>
+#include <TMemberInspector.h>
+#include <TROOT.h>
+#include <TVirtualMutex.h>
 
 #ifndef G__ROOT
 #define G__ROOT
 #endif
 
-#include "RtypesImp.h"
-#include "TIsAProxy.h"
-#include "TFileMergeInfo.h"
+#include <RtypesImp.h>
+#include <TCollectionProxyInfo.h>
+#include <TFileMergeInfo.h>
+#include <TIsAProxy.h>
+
 #include <algorithm>
-#include "TCollectionProxyInfo.h"
 /*******************************************************************/
 
-#include "TDataMember.h"
+#include <TDataMember.h>
 
 // Since CINT ignores the std namespace, we need to do so in this file.
 namespace std {

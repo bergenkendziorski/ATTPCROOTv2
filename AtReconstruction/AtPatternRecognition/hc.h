@@ -2,10 +2,11 @@
 #define HC_H
 
 #include <pcl/io/io.h>
-#include <limits>
-#include <vector>
 
 #include "cluster.h"
+
+#include <limits>
+#include <vector>
 
 namespace hc {
 struct triplet {

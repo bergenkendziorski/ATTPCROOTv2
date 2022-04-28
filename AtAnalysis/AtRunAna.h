@@ -1,7 +1,13 @@
 #ifndef ATRUNANA_H
 #define ATRUNANA_H
 
-#include "FairRunAna.h"
+#include <FairRunAna.h>
+
+#include <Rtypes.h>
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtRunAna : public FairRunAna {
 public:

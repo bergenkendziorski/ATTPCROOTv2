@@ -12,28 +12,23 @@
 // -----                Created 26/03/14  by M. Al-Turany              -----
 // -------------------------------------------------------------------------
 #include "AtCave.h"
-#include "AtGeoCave.h"        // for AtGeoCave
-#include "FairGeoInterface.h" // for FairGeoInterface
-#include "FairGeoLoader.h"    // for FairGeoLoader
-#include "FairGeoNode.h"      // for FairGeoNode
-//#include "FairGeoPassivePar.h"          // for FairGeoPassivePar
-#include "FairGeoVolume.h" // for FairGeoVolume
-#include "FairRun.h"       // for FairRun
-#include "FairRuntimeDb.h" // for FairRuntimeDb
 
-#include "TList.h"     // for TListIter, TList (ptr only)
-#include "TObjArray.h" // for TObjArray
-#include "TString.h"   // for TString
+#include "AtGeoCave.h" // for AtGeoCave
 
-#include <stddef.h> // for NULL
+#include <FairGeoInterface.h> // for FairGeoInterface
+#include <FairGeoLoader.h>    // for FairGeoLoader
+#include <FairModule.h>
 
-ClassImp(AtCave)
+#include <Rtypes.h>
+#include <TString.h> // for TString
 
-   void AtCave::ConstructGeometry()
+ClassImp(AtCave);
+
+void AtCave::ConstructGeometry()
 {
    FairGeoLoader *loader = FairGeoLoader::Instance();
    FairGeoInterface *GeoInterface = loader->getGeoInterface();
-   AtGeoCave *MGeo = new AtGeoCave();
+   auto *MGeo = new AtGeoCave(); // NOLINT I have no idea who owns this...
    MGeo->setGeomFile(GetGeometryFileName());
    GeoInterface->addGeoModule(MGeo);
    Bool_t rc = GeoInterface->readSet(MGeo);
@@ -43,7 +38,7 @@ ClassImp(AtCave)
 }
 AtCave::AtCave() : FairModule() {}
 
-AtCave::~AtCave() {}
+AtCave::~AtCave() = default;
 AtCave::AtCave(const char *name, const char *Title) : FairModule(name, Title)
 {
    world[0] = 0;

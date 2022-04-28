@@ -2,7 +2,16 @@
 #define AtSIMULATEDLINE_H
 
 #include "AtSimulatedPoint.h"
-#include "Math/Vector3D.h"
+
+#include <Math/Vector3D.h>
+#include <Math/Vector3Dfwd.h>
+#include <Rtypes.h>
+
+#include <cstddef>
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtSimulatedLine : public AtSimulatedPoint {
 
@@ -14,8 +23,7 @@ protected:
 public:
    AtSimulatedLine();
    AtSimulatedLine(std::size_t mcPointID, Int_t clusterID, Int_t charge, const ROOT::Math::XYZVector &posIn,
-                   const ROOT::Math::XYZVector &posOut, Double_t longitudalDiffusionSigma,
-                   Double_t transverseDiffusionSigma);
+                   ROOT::Math::XYZVector posOut, Double_t longitudalDiffusionSigma, Double_t transverseDiffusionSigma);
 
    void SetFinalPosition(Double_t x, Double_t y, Double_t zTime);
    void SetInitialPosition(Double_t x, Double_t y, Double_t zTime);

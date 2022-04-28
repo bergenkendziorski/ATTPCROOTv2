@@ -8,12 +8,21 @@
 #ifndef APOLLO_H
 #define APOLLO_H
 
-#include "FairDetector.h"
-#include "TVector3.h"
+#include <FairDetector.h>
+
+#include <Rtypes.h>
+#include <TString.h>
+#include <TVector3.h>
+
+#include <string>
 
 class FairVolume;
 class TClonesArray;
 class AtApolloPoint;
+class TBuffer;
+class TClass;
+class TList;
+class TMemberInspector;
 
 class AtApollo : public FairDetector {
 public:
@@ -85,10 +94,10 @@ private:
    Double32_t fELoss;    //!  energy loss
    Double32_t fELossAcc; //!  accumulated energy loss
 
-   TClonesArray *fTraCollection; //!  The hit collection
+   TClonesArray *fTraCollection{}; //!  The hit collection
 
-   Bool_t kGeoSaved; //!
-   TList *flGeoPar;  //!
+   Bool_t kGeoSaved{}; //!
+   TList *flGeoPar{};  //!
 
    /** container for data points */
    TClonesArray *fAtApolloPointCollection; //!

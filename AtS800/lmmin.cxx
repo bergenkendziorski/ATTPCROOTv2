@@ -23,11 +23,12 @@
  * and you think this work is worth it, you can buy me a beer in return.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <float.h>
 #include "lmmin.h"
+
+#include <cfloat>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 /*****************************************************************************/
 /*  set numeric constants                                                    */
@@ -92,7 +93,7 @@ void lm_printout_std(int n_par, const double *par, int m_dat, const void *data, 
  *       nfev  : number of calls to *evaluate
  */
 {
-   int i;
+   int i = 0;
 
    if (!printflags)
       return;
@@ -140,19 +141,21 @@ void lmmin(int n_par, double *par, int m_dat, const void *data,
 
    /*** allocate work space. ***/
 
-   double *fvec, *diag, *fjac, *qtf, *wa1, *wa2, *wa3, *wa4;
-   int *ipvt, j;
+   double *fvec, *diag, *fjac, *qtf, *wa1, *wa2, *wa3, *wa4; // NOLINT
+   int *ipvt = nullptr, j = 0;
 
    int n = n_par;
    int m = m_dat;
 
-   if ((fvec = (double *)malloc(m * sizeof(double))) == NULL || (diag = (double *)malloc(n * sizeof(double))) == NULL ||
-       (qtf = (double *)malloc(n * sizeof(double))) == NULL ||
-       (fjac = (double *)malloc(n * m * sizeof(double))) == NULL ||
-       (wa1 = (double *)malloc(n * sizeof(double))) == NULL || (wa2 = (double *)malloc(n * sizeof(double))) == NULL ||
-       (wa3 = (double *)malloc(n * sizeof(double))) == NULL || (wa4 = (double *)malloc(m * sizeof(double))) == NULL ||
-       (ipvt = (int *)malloc(n * sizeof(int))) == NULL) {
-      status->info = 9;
+   if ((fvec = (double *)malloc(m * sizeof(double))) == nullptr ||
+       (diag = (double *)malloc(n * sizeof(double))) == nullptr ||
+       (qtf = (double *)malloc(n * sizeof(double))) == nullptr ||
+       (fjac = (double *)malloc(n * m * sizeof(double))) == nullptr ||
+       (wa1 = (double *)malloc(n * sizeof(double))) == nullptr ||
+       (wa2 = (double *)malloc(n * sizeof(double))) == nullptr ||
+       (wa3 = (double *)malloc(n * sizeof(double))) == nullptr ||
+       (wa4 = (double *)malloc(m * sizeof(double))) == nullptr || (ipvt = (int *)malloc(n * sizeof(int))) == nullptr) {
+      status->info = 9; // NOLINT
       return;
    }
 
@@ -360,9 +363,10 @@ void lm_lmdif(int m, int n, double *x, double *fvec, double ftol, double xtol, d
     *        evaluate. Typically, it contains experimental data to be fitted.
     *
     */
-   int i, iter, j;
-   double actred, delta, dirder, eps, fnorm, fnorm1, gnorm, par, pnorm, prered, ratio, step, sum, temp, temp1, temp2,
-      temp3, xnorm;
+   int i = 0, iter = 0, j = 0;
+   double actred = NAN, delta = NAN, dirder = NAN, eps = NAN, fnorm = NAN, fnorm1 = NAN, gnorm = NAN, par = NAN,
+          pnorm = NAN, prered = NAN, ratio = NAN, step = NAN, sum = NAN, temp = NAN, temp1 = NAN, temp2 = NAN,
+          temp3 = NAN, xnorm = NAN;
    static double p1 = 0.1;
    static double p0001 = 1.0e-4;
 
@@ -649,7 +653,7 @@ void lm_lmdif(int m, int n, double *x, double *fvec, double ftol, double xtol, d
 
       /*** outer: end of the loop. ***/
 
-   } while (1);
+   } while (true);
 
 } /*** lm_lmdif. ***/
 
@@ -732,9 +736,9 @@ void lm_lmpar(int n, double *r, int ldr, int *ipvt, double *diag, double *qtb, d
     *      xdi is a work array of length n. On OUTPUT: diag[j] * x[j].
     *
     */
-   int i, iter, j, nsing;
-   double dxnorm, fp, fp_old, gnorm, parc, parl, paru;
-   double sum, temp;
+   int i = 0, iter = 0, j = 0, nsing = 0;
+   double dxnorm = NAN, fp = NAN, fp_old = NAN, gnorm = NAN, parc = NAN, parl = NAN, paru = NAN;
+   double sum = NAN, temp = NAN;
    static double p1 = 0.1;
 
 #ifdef LMFIT_DEBUG_MESSAGES
@@ -937,8 +941,8 @@ void lm_qrfac(int m, int n, double *a, int pivot, int *ipvt, double *rdiag, doub
     *        can coincide with rdiag.
     *
     */
-   int i, j, k, kmax, minmn;
-   double ajnorm, sum, temp;
+   int i = 0, j = 0, k = 0, kmax = 0, minmn = 0;
+   double ajnorm = NAN, sum = NAN, temp = NAN;
 
    /*** qrfac: compute initial column norms and initialize several arrays. ***/
 
@@ -1093,9 +1097,9 @@ void lm_qrsolv(int n, double *r, int ldr, int *ipvt, double *diag, double *qtb, 
     *      wa is a work array of length n.
     *
     */
-   int i, kk, j, k, nsing;
-   double qtbpj, sum, temp;
-   double _sin, _cos, _tan, _cot; /* local variables, not functions */
+   int i = 0, kk = 0, j = 0, k = 0, nsing = 0;
+   double qtbpj = NAN, sum = NAN, temp = NAN;
+   double _sin = NAN, _cos = NAN, _tan = NAN, _cot = NAN; /* local variables, not functions */
 
    /*** qrsolv: copy r and (q transpose)*b to preserve input and initialize s.
         in particular, save the diagonal elements of r in x. ***/
@@ -1221,8 +1225,8 @@ double lm_enorm(int n, const double *x)
     *
     *      x is an input array of length n.
     */
-   int i;
-   double agiant, s1, s2, s3, xabs, x1max, x3max, temp;
+   int i = 0;
+   double agiant = NAN, s1 = NAN, s2 = NAN, s3 = NAN, xabs = NAN, x1max = NAN, x3max = NAN, temp = NAN;
 
    s1 = 0;
    s2 = 0;

@@ -9,8 +9,14 @@
 #ifndef S800EVENT_H
 #define S800EVENT_H
 
+#include <Rtypes.h>
 #include <TObject.h>
+
 #include "S800.h"
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class S800Event : public TObject {
 public:

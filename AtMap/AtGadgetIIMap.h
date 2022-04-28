@@ -8,10 +8,17 @@
 #ifndef ATGADGETIIMAP_H
 #define ATGADGETIIMAP_H
 
-#include <boost/multi_array.hpp>
-
 #include "AtMap.h"
-#include "unordered_map"
+
+#include <Math/Point2Dfwd.h>
+#include <Rtypes.h>
+
+#include <unordered_map>
+
+class TBuffer;
+class TClass;
+class TH2Poly;
+class TMemberInspector;
 
 class AtGadgetIIMap : public AtMap {
 
@@ -19,12 +26,12 @@ public:
    AtGadgetIIMap();
    ~AtGadgetIIMap();
 
-   void Dump() override;                                      // pure virtual member
-   void GenerateAtTpc() override;                             // pure virtual member
-   std::vector<Float_t> CalcPadCenter(Int_t PadRef) override; // pure virtual member
-   Int_t BinToPad(Int_t binval) override;                     // pure virtual member
+   void Dump() override;                                         // pure virtual member
+   void GeneratePadPlane() override;                             // pure virtual member
+   ROOT::Math::XYPoint CalcPadCenter(Int_t PadRef) override;     // pure virtual member
+   Int_t BinToPad(Int_t binval) override { return binval - 1; }; // pure virtual member
 
-   TH2Poly *GetAtTpcPlane() override; // virtual member
+   TH2Poly *GetPadPlane() override; // virtual member
 
    void SetBinToPadMap();
 

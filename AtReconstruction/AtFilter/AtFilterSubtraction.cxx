@@ -1,13 +1,15 @@
 #include "AtFilterSubtraction.h"
-#include "FairLogger.h"
-#include "AtRawEvent.h"
+
 #include "AtMap.h"
 #include "AtPad.h"
+#include "AtPadReference.h"
+#include "AtRawEvent.h"
 
-#include <algorithm>
+#include <FairLogger.h>
 
-AtFilterSubtraction::AtFilterSubtraction(AtMapPtr map, Int_t numCoBos)
-   : fNumberCoBo(numCoBos), fMapping(map), fThreshold(0)
+#include <utility>
+
+AtFilterSubtraction::AtFilterSubtraction(AtMapPtr map, Int_t numCoBos) : fNumberCoBo(numCoBos), fMapping(std::move(map))
 {
    fBaseline.resize(fNumberCoBo);
    fRawBaseline.resize(fNumberCoBo);
@@ -34,11 +36,9 @@ void AtFilterSubtraction::InitEvent(AtRawEvent *event)
    Clear();
 
    for (const auto &pad : event->GetPads())
-      processPad(pad);
-
+      processPad(*pad);
    AverageBaseline();
-
-   // LOG(INFO) << "AtFilterSubtraction: Used " << fNumberChUsed << " channels out of a possible " << fNumberChAvail;
+   fEventNumber = event->GetEventID();
 }
 
 void AtFilterSubtraction::processPad(const AtPad &pad)
@@ -74,7 +74,7 @@ void AtFilterSubtraction::AverageBaseline()
                fRawBaseline[cobo][asad][tb] /= fAgetCount[cobo][asad];
             }
          else {
-            LOG(ERROR) << "All AGET ch0s had data for cobo " << cobo << " asad " << asad;
+            LOG(ERROR) << "No baseline for cobo " << cobo << " asad " << asad << " in event " << fEventNumber;
             fNumberMissedAsads++;
          }
 }
@@ -85,13 +85,14 @@ void AtFilterSubtraction::Filter(AtPad *pad)
    auto padRef = fMapping->GetPadRef(pad->GetPadNum());
    auto cobo = padRef.cobo;
    auto asad = padRef.asad;
-   auto adc = pad->GetADC();
-   auto adcRaw = pad->GetRawADC();
+
+   auto &adc = pad->GetADC();
+   auto &adcRaw = pad->GetRawADC();
 
    for (int tb = 0; tb < 512; ++tb) {
-      adcRaw[tb] -= fRawBaseline[cobo][asad][tb];
+      pad->SetRawADC(tb, adcRaw[tb] - fRawBaseline[cobo][asad][tb]);
       if (pad->IsPedestalSubtracted())
-         adc[tb] -= fBaseline[cobo][asad][tb];
+         pad->SetADC(tb, adc[tb] - fBaseline[cobo][asad][tb]);
    }
 }
 
@@ -99,5 +100,9 @@ void AtFilterSubtraction::Init() {}
 
 bool AtFilterSubtraction::IsGoodEvent()
 {
-   return fNumberMissedAsads == 0;
+   bool isGoodEvent = (fNumberMissedAsads == 0);
+   if (fSetIsGood)
+      return isGoodEvent;
+   else
+      return true;
 }

@@ -7,56 +7,44 @@
 #ifndef ATEVENTDRAWTASK_H
 #define ATEVENTDRAWTASK_H
 
-// ATTPCROOT classes
+#include <FairTask.h> // for FairTask, InitStatus
+
+#include <Rtypes.h>  // for Int_t, Bool_t, THashConsistencyHolder, Color_t
+#include <TString.h> // for TString
+
+#include <vector>         // for vector
+class AtEventManager;     // lines 17-17
+class AtHit;              // lines 18-18
+class AtLmedsMod;         // lines 19-19
+class AtMap;              // lines 24-24
+class AtMlesacMod;        // lines 20-20
+class AtRansacMod;        // lines 21-21
+class AtRawEvent;         // lines 22-22
+class AtTrackingEventAna; // lines 23-23
+class TBuffer;
+class TCanvas; // lines 30-30
+class TClass;
+class TClonesArray;    // lines 31-31
+class TEveBoxSet;      // lines 33-33
+class TEveLine;        // lines 34-34
+class TEvePointSet;    // lines 32-32
+class TEveRGBAPalette; // lines 44-44
+class TF1;             // lines 39-39
+class TGraph;          // lines 35-35
+class TH1D;            // lines 37-37
+class TH1F;            // lines 38-38
+class TH1I;            // lines 36-36
+class TH2F;            // lines 40-40
+class TH2Poly;         // lines 41-41
+class TH3F;            // lines 42-42
+class TMemberInspector;
+class TPaletteAxis; // lines 43-43
 namespace AtPATTERN {
 class AtTrackFinderHC;
-}
+} // namespace AtPATTERN
 namespace AtRANSACN {
 class AtRansac;
-}
-class AtEvent;
-class AtEventManager;
-class AtHit;
-class AtLmedsMod;
-class AtMlesacMod;
-class AtRansacMod;
-class AtRawEvent;
-class AtTrackingEventAna;
-class AtMap;
-class AtTpcMap;
-class AtPatternEvent;
-
-// FairRoot classes
-#include "FairTask.h"
-
-// ROOT classes
-class TCanvas;
-class TClonesArray;
-class TEvePointSet;
-class TEveGeoShape;
-class TEveBoxSet;
-class TEveLine;
-class TGraph;
-class TH1I;
-class TH1D;
-class TH1F;
-class TF1;
-class TH2D;
-class TH2F;
-class TH2Poly;
-class TH3F;
-class TPaletteAxis;
-class TVector3;
-
-#include "TEveRGBAPalette.h"
-
-#include <Rtypes.h>
-#include <fstream>
-#include "TF1.h"
-
-#ifndef __CINT__ // Boost
-#include <boost/multi_array.hpp>
-#endif //__CINT__
+} // namespace AtRANSACN
 
 enum DetectorId { kAtTpc, kGADGETII, kSpecMAT };
 
@@ -82,6 +70,7 @@ public:
    void SetLine6(double t, std::vector<Double_t> p, double &x, double &y, double &z);
    void SetRawEventBranch(TString branchName);
    void SetEventBranch(TString branchName);
+   void SetCorrectedEventBranch(TString branchName) { fCorrectedEventBranchName = branchName; }
 
    static void SelectPad(const char *rawevt);
    void DrawWave(Int_t PadNum);
@@ -141,20 +130,22 @@ private:
 
    TString fRawEventBranchName;
    TString fEventBranchName;
+   TString fCorrectedEventBranchName;
 
-   TClonesArray *fHitArray;
-   TClonesArray *fRawEventArray;
-   TClonesArray *fRansacArray;
-   TClonesArray *fTrackFinderHCArray;
-   TClonesArray *fTrackingEventAnaArray;
-   TClonesArray *fPatternEventArray;
+   TClonesArray *fEventArray;
+   TClonesArray *fCorrectedEventArray{};
+   TClonesArray *fRawEventArray{};
+   TClonesArray *fRansacArray{};
+   TClonesArray *fTrackFinderHCArray{};
+   TClonesArray *fTrackingEventAnaArray{};
+   TClonesArray *fPatternEventArray{};
 
-   AtRANSACN::AtRansac *fRansac;
-   AtRansacMod *fRansacMod;
-   AtMlesacMod *fMlesacMod;
-   AtLmedsMod *fLmedsMod;
-   AtTrackingEventAna *fTrackingEventAna;
-   AtPATTERN::AtTrackFinderHC *fTrackFinderHC;
+   AtRANSACN::AtRansac *fRansac{};
+   AtRansacMod *fRansacMod{};
+   AtMlesacMod *fMlesacMod{};
+   AtLmedsMod *fLmedsMod{};
+   AtTrackingEventAna *fTrackingEventAna{};
+   AtPATTERN::AtTrackFinderHC *fTrackFinderHC{};
 
    AtEventManager *fEventManager;
    AtRawEvent *fRawevent;
@@ -165,11 +156,12 @@ private:
    TString fMap;
 
    TEvePointSet *fHitSet;
-   TEvePointSet *fHitSetMin;
+   TEvePointSet *fCorrectedHitSet;
+   TEvePointSet *fHitSetMin{};
 
-   TEvePointSet *fHitSetMC[5];     // For MC results
-   TEvePointSet *fHitSetTFHC[20];  // for TrackFinderHC
-   TEveBoxSet *fHitClusterSet[20]; // Track clusterization
+   TEvePointSet *fHitSetMC[5]{};     // For MC results
+   TEvePointSet *fHitSetTFHC[20]{};  // for TrackFinderHC
+   TEveBoxSet *fHitClusterSet[20]{}; // Track clusterization
 
    // TEveGeoShape* x;
    // std::vector<TEveGeoShape*> hitSphereArray;
@@ -187,7 +179,7 @@ private:
    TCanvas *fCvsPadWave;
    TH1I *fPadWave;
    TCanvas *fCvsPadAll;
-   TH1I *fPadAll[fNumPads];
+   TH1I *fPadAll[fNumPads]{};
    TCanvas *fCvsQEvent;
    TH1D *fQEventHist;
    TH1D *fQEventHist_H;
@@ -196,7 +188,7 @@ private:
    TCanvas *fCvsRhoVariance;
    TH1D *fRhoVariance;
    TCanvas *fCvsPhi;
-   TH1D *fPhiDistr[5];
+   TH1D *fPhiDistr[5]{};
    TCanvas *fCvsMesh;
    TH1F *fMesh;
    TCanvas *fCvs3DHist;
@@ -205,36 +197,36 @@ private:
    TH2F *fRadVSTb;
    TCanvas *fCvsTheta;
    TH2F *fTheta;
-   TCanvas *fCvsThetaxPhi;
-   TH2F *fThetaxPhi;
-   TCanvas *fCvsQuadrant1;
-   TH2F *fQuadrant1;
-   TCanvas *fCvsQuadrant2;
-   TH2F *fQuadrant2;
-   TCanvas *fCvsQuadrant3;
-   TH2F *fQuadrant3;
-   TCanvas *fCvsQuadrant4;
-   TH2F *fQuadrant4;
-   TH1F *fAuxChannels[9];
-   TCanvas *fCvsAux;
+   TCanvas *fCvsThetaxPhi{};
+   TH2F *fThetaxPhi{};
+   TCanvas *fCvsQuadrant1{};
+   TH2F *fQuadrant1{};
+   TCanvas *fCvsQuadrant2{};
+   TH2F *fQuadrant2{};
+   TCanvas *fCvsQuadrant3{};
+   TH2F *fQuadrant3{};
+   TCanvas *fCvsQuadrant4{};
+   TH2F *fQuadrant4{};
+   TH1F *fAuxChannels[9]{};
+   TCanvas *fCvsAux{};
 
-   TH2F *fThetaxPhi_Ini;
-   TH2F *fThetaxPhi_Ini_RANSAC;
+   TH2F *fThetaxPhi_Ini{};
+   TH2F *fThetaxPhi_Ini_RANSAC{};
 
-   TCanvas *fCvsMC_XY;
-   TGraph *fMC_XY;
-   TGraph *fMC_XY_exp;
-   TGraph *fMC_XY_int;
-   TGraph *fMC_XY_back;
-   TCanvas *fCvsMC_Z;
-   TGraph *fMC_ZX;
-   TGraph *fMC_ZX_int;
-   TGraph *fMC_ZX_back;
-   TGraph *fMC_ZY;
-   TGraph *fMC_ZY_int;
-   TGraph *fMC_ZY_back;
+   TCanvas *fCvsMC_XY{};
+   TGraph *fMC_XY{};
+   TGraph *fMC_XY_exp{};
+   TGraph *fMC_XY_int{};
+   TGraph *fMC_XY_back{};
+   TCanvas *fCvsMC_Z{};
+   TGraph *fMC_ZX{};
+   TGraph *fMC_ZX_int{};
+   TGraph *fMC_ZX_back{};
+   TGraph *fMC_ZY{};
+   TGraph *fMC_ZY_int{};
+   TGraph *fMC_ZY_back{};
 
-   Int_t fNQuads;
+   Int_t fNQuads{};
 
    Int_t fMinZ;
    Int_t fMaxZ;
@@ -242,7 +234,7 @@ private:
    Int_t fMaxX;
 
    Int_t f3DHitStyle;
-   Int_t fMultiHit;
+   Int_t fMultiHit{10};
    Bool_t fSaveTextData;
    Float_t f3DThreshold;
    Bool_t fIsRawData;
@@ -255,7 +247,7 @@ private:
    AtHit const *fIniHitRansac;
 
    // std::vector<TEveLine*> fLineArray;
-   TEveLine *fLineArray[5];
+   TEveLine *fLineArray[5]{};
    TEvePointSet *fVertex = nullptr;
    Int_t fLineNum;
    Int_t fTrackNum;

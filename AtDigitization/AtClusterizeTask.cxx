@@ -1,31 +1,34 @@
 #include "AtClusterizeTask.h"
 
-// Fair class header
-#include "FairRootManager.h"
-#include "FairRunAna.h"
-#include "FairRuntimeDb.h"
+#include <FairLogger.h>
+#include <FairParSet.h>
+#include <FairTask.h>
 
-#include "AtDigiPar.h"
-#include "AtGas.h"
-#include "AtSimulatedPoint.h"
-#include "AtMCPoint.h"
-#include "AtVertexPropagator.h"
+#include <TMathBase.h>
+#include <TObject.h>
+#include <TString.h>
 
-// STL class headers
-#include <cmath>
 #include <iostream>
-#include <iomanip>
+#include <memory>
 
-#include "TClonesArray.h"
-#include "TF1.h"
-#include "TMath.h"
-#include "TRandom.h"
+// Fair class header
+#include "AtDigiPar.h"
+#include "AtMCPoint.h"
+#include "AtSimulatedPoint.h"
+
+#include <FairRootManager.h>
+#include <FairRunAna.h>
+#include <FairRuntimeDb.h>
+
+#include <TClonesArray.h>
+#include <TMath.h>
+#include <TRandom.h>
 
 using XYZVector = ROOT::Math::XYZVector;
 
-AtClusterizeTask::AtClusterizeTask() : FairTask("AtClusterizeTask"), fEventID(0), fIsPersistent(kFALSE) {}
+AtClusterizeTask::AtClusterizeTask() : AtClusterizeTask("AtClusterizeTask") {}
 
-AtClusterizeTask::AtClusterizeTask(const char *name) : FairTask(name), fEventID(0), fIsPersistent(kFALSE) {}
+AtClusterizeTask::AtClusterizeTask(const char *name) : FairTask(name) {}
 
 AtClusterizeTask::~AtClusterizeTask()
 {
@@ -74,8 +77,8 @@ InitStatus AtClusterizeTask::Init()
       return kERROR;
    }
 
-   fSimulatedPointArray = new TClonesArray("AtSimulatedPoint");
-   ioman->Register("AtSimulatedPoint", "cbmsim", fSimulatedPointArray, fIsPersistent);
+   fSimulatedPointArray = std::make_unique<TClonesArray>("AtSimulatedPoint");
+   ioman->Register("AtSimulatedPoint", "cbmsim", fSimulatedPointArray.get(), fIsPersistent);
 
    getParameters();
 
@@ -115,7 +118,7 @@ void AtClusterizeTask::processPoint(Int_t mcPointID)
    for (int i = 0; i < genElectrons; ++i) {
       auto loc = applyDiffusion(currentPoint + i * step, sigTrans, sigLong);
       auto size = fSimulatedPointArray->GetEntriesFast();
-      AtSimulatedPoint *simElec = new ((*fSimulatedPointArray)[size]) AtSimulatedPoint(mcPointID, i, loc);
+      new ((*fSimulatedPointArray)[size]) AtSimulatedPoint(mcPointID, i, loc);
    }
 
    fPrevPoint = currentPoint;
@@ -158,10 +161,10 @@ UInt_t AtClusterizeTask::getNumberOfElectronsGenerated()
 
 XYZVector AtClusterizeTask::getCurrentPointLocation()
 {
-   auto zInCm = fDetPadPlane / 10. - fMCPoint->GetZIn();
+   auto zInCm = fDetPadPlane / 10. - fMCPoint->GetZ();
    auto driftTime = TMath::Abs(zInCm) / fVelDrift; // us
 
-   return XYZVector(fMCPoint->GetXIn() * 10., fMCPoint->GetYIn() * 10., driftTime);
+   return {fMCPoint->GetX() * 10., fMCPoint->GetY() * 10., driftTime};
 }
 
 ROOT::Math::XYZVector

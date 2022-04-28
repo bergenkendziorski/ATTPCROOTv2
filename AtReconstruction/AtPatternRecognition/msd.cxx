@@ -1,9 +1,10 @@
+#include "msd.h"
+
 #include <pcl/kdtree/kdtree_flann.h>
+
 #include <algorithm>
 #include <numeric>
 #include <vector>
-
-#include "msd.h"
 namespace msd {
 /*
 @brief Compute mean squared distance.

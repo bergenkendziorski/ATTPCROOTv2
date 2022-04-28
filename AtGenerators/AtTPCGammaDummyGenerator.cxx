@@ -4,22 +4,26 @@
 // -------------------------------------------------------------------------
 
 #include "AtTPCGammaDummyGenerator.h"
-#include "FairPrimaryGenerator.h"
 
-#include "FairRunSim.h"
-#include "FairLogger.h"
+#include <FairLogger.h>
+#include <FairPrimaryGenerator.h>
 
-#include "TDatabasePDG.h"
-#include "TParticlePDG.h"
+#include <TDatabasePDG.h>
+#include <TMath.h>
+#include <TParticlePDG.h>
+#include <TRandom.h>
 
-#include "TRandom.h"
-#include "TMath.h"
+#include <cmath>
+#include <cstdio>
+#include <memory>
+
 AtTPCGammaDummyGenerator::AtTPCGammaDummyGenerator()
    : fPDGType(0), fMult(0), fPDGMass(0), fPtMin(0), fPtMax(0), fPhiMin(0), fPhiMax(0), fEtaMin(0), fEtaMax(0), fYMin(0),
      fYMax(0), fPMin(0), fPMax(0), fThetaMin(0), fThetaMax(0), fX(0), fY(0), fZ(0), fX1(0), fY1(0), fZ1(0), fX2(0),
-     fY2(0), fZ2(0), fEtaRangeIsSet(0), fYRangeIsSet(0), fThetaRangeIsSet(0), fCosThetaIsSet(0), fPtRangeIsSet(0),
-     fPRangeIsSet(0), fPointVtxIsSet(0), fBoxVtxIsSet(0), fDebug(0), fGammasDefinedInNuclearDecay(0),
-     fBetaOfEmittingFragment(0), fGammaFactor(1), fLorentzBoostIsSet(0), fNuclearDecayChainIsSet(0)
+     fY2(0), fZ2(0), fEtaRangeIsSet(false), fYRangeIsSet(false), fThetaRangeIsSet(false), fCosThetaIsSet(false),
+     fPtRangeIsSet(false), fPRangeIsSet(false), fPointVtxIsSet(false), fBoxVtxIsSet(false), fDebug(false),
+     fGammasDefinedInNuclearDecay(0), fBetaOfEmittingFragment(0), fGammaFactor(1), fLorentzBoostIsSet(false),
+     fNuclearDecayChainIsSet(false)
 {
    // Default constructor
 }
@@ -27,15 +31,16 @@ AtTPCGammaDummyGenerator::AtTPCGammaDummyGenerator()
 AtTPCGammaDummyGenerator::AtTPCGammaDummyGenerator(Int_t pdgid, Int_t mult)
    : fPDGType(pdgid), fMult(mult), fPDGMass(0), fPtMin(0), fPtMax(0), fPhiMin(0), fPhiMax(0), fEtaMin(0), fEtaMax(0),
      fYMin(0), fYMax(0), fPMin(0), fPMax(0), fThetaMin(0), fThetaMax(0), fX(0), fY(0), fZ(0), fX1(0), fY1(0), fZ1(0),
-     fX2(0), fY2(0), fZ2(0), fEtaRangeIsSet(0), fYRangeIsSet(0), fThetaRangeIsSet(0), fCosThetaIsSet(0),
-     fPtRangeIsSet(0), fPRangeIsSet(0), fPointVtxIsSet(0), fBoxVtxIsSet(0), fDebug(0), fGammasDefinedInNuclearDecay(0),
-     fBetaOfEmittingFragment(0), fGammaFactor(1), fLorentzBoostIsSet(0), fNuclearDecayChainIsSet(0)
+     fX2(0), fY2(0), fZ2(0), fEtaRangeIsSet(false), fYRangeIsSet(false), fThetaRangeIsSet(false), fCosThetaIsSet(false),
+     fPtRangeIsSet(false), fPRangeIsSet(false), fPointVtxIsSet(false), fBoxVtxIsSet(false), fDebug(false),
+     fGammasDefinedInNuclearDecay(0), fBetaOfEmittingFragment(0), fGammaFactor(1), fLorentzBoostIsSet(false),
+     fNuclearDecayChainIsSet(false)
 {
    // Constructor. Set default kinematics limits
    SetPhiRange();
 }
 
-AtTPCGammaDummyGenerator::~AtTPCGammaDummyGenerator() {}
+AtTPCGammaDummyGenerator::~AtTPCGammaDummyGenerator() = default;
 
 Bool_t AtTPCGammaDummyGenerator::Init()
 {
@@ -70,7 +75,7 @@ Bool_t AtTPCGammaDummyGenerator::Init()
    TParticlePDG *particle = pdgBase->GetParticle(fPDGType);
    if (!particle)
       LOG(fatal) << "AtTPCGammaDummyGenerator: PDG code " << fPDGType << " not defined.";
-   fPDGMass = particle->Mass();
+   fPDGMass = particle->Mass(); // NOLINT
    return kTRUE;
 }
 
@@ -84,7 +89,7 @@ Bool_t AtTPCGammaDummyGenerator::ReadEvent(FairPrimaryGenerator *primGen)
 
    Double32_t pabs = 0, phi, pt = 0, theta = 0, eta, y, mt, px, py, pz = 0;
    Double32_t br = 0;
-   Bool_t doNotBoost = 0;
+   Bool_t doNotBoost = false;
 
    // Generate particles
    for (Int_t k = 0; k < fMult; k++) {
@@ -141,7 +146,7 @@ Bool_t AtTPCGammaDummyGenerator::ReadEvent(FairPrimaryGenerator *primGen)
                br = br - fGammaBranchingRatios[i];
          }
          // if Sum(branchingRatios)<1, the leftover probability (up to 1) is defined as environmental noise
-         doNotBoost = 1;
+         doNotBoost = true;
       }
       /*
     if (fLorentzBoostIsSet && !doNotBoost){

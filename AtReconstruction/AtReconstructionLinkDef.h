@@ -4,19 +4,7 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class AtHDFParser + ;
-#pragma link C++ class AtPad + ;
-#pragma link C++ class AtRawEvent + ;
-#pragma link C++ class AtHit + ;
-#pragma link C++ class AtHitCluster + ;
-#pragma link C++ struct AtHit::MCSimPoint + ;
-#pragma link C++ class AtEvent + ;
-#pragma link C++ class AtProtoEvent + ;
-#pragma link C++ class AtProtoEventAna + ;
-#pragma link C++ class AtPatternEvent + ;
-#pragma link C++ class AtTrackingEventAna + ;
-#pragma link C++ class AtProtoQuadrant + ;
-#pragma link C++ class AtTrack + ;
+#pragma link C++ class AtFFTFilter - !; // Don't generate any IO
 
 #pragma link C++ class AtPSA + ;
 #pragma link C++ class AtPSASimple + ;
@@ -54,8 +42,9 @@
 
 #pragma link C++ class AtRansacTask + ;
 
-#pragma link C++ struct AtTrack::FitPar + ;
-#pragma link C++ class AtHDFParserTask + ;
+#pragma link C++ class AtDataReductionTask + ;
+
+#pragma link C++ class AtSpaceChargeCorrectionTask + ;
 
 //#pragma link C++ function AtHoughSpaceLine::CalcGenHoughSpace<AtEvent*>(GenHough event);
 

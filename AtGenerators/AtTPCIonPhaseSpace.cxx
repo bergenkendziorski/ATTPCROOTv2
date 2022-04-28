@@ -1,35 +1,22 @@
 #include "AtTPCIonPhaseSpace.h"
 
-#include "FairPrimaryGenerator.h"
-#include "FairRootManager.h"
-#include "FairLogger.h"
-#include "FairMCEventHeader.h"
-
-#include "FairIon.h"
-#include "FairRunSim.h"
-#include "FairRunAna.h"
-
-#include "TDatabasePDG.h"
-#include "TParticlePDG.h"
-#include "TObjArray.h"
-
-#include "TRandom.h"
-#include "TMath.h"
-#include "TLorentzVector.h"
-#include "TVector3.h"
-#include "TGenPhaseSpace.h"
-#include "TVirtualMC.h"
-#include "TParticle.h"
-#include "TClonesArray.h"
-
-#include "FairRunSim.h"
-#include "FairIon.h"
-#include <iostream>
-#include "TParticle.h"
-
-#include "AtStack.h"
-#include "AtMCPoint.h"
 #include "AtVertexPropagator.h"
+
+#include <FairIon.h>
+#include <FairPrimaryGenerator.h>
+#include <FairRunSim.h>
+
+#include <TDatabasePDG.h>
+#include <TGenPhaseSpace.h>
+#include <TLorentzVector.h>
+#include <TMath.h>
+#include <TParticlePDG.h>
+#include <TString.h>
+#include <TVector3.h>
+
+#include <algorithm>
+#include <cmath>
+#include <iostream>
 
 Int_t AtTPCIonPhaseSpace::fgNIon = 0;
 
@@ -46,21 +33,11 @@ AtTPCIonPhaseSpace::AtTPCIonPhaseSpace(const char *name, std::vector<Int_t> *z, 
                                        std::vector<Double_t> *py, std::vector<Double_t> *pz,
                                        std::vector<Double_t> *mass, Double_t ResEner, Int_t ZB, Int_t AB, Double_t PxB,
                                        Double_t PyB, Double_t PzB, Double_t BMass, Double_t TMass)
-   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fVx(0.), fVy(0.), fVz(0.), fIon(0), fQ(0)
+   : fMult(mult), fPx(0.), fPy(0.), fPz(0.), fVx(0.), fVy(0.), fVz(0.), fIon(0), fQ(0), fBeamEnergy_buff(ResEner),
+     fBeamMass(BMass), fTargetMass(TMass), fZBeam(ZB), fABeam(AB), fPxBeam(PxB), fPyBeam(PyB), fPzBeam(PzB)
 {
-
    fgNIon++;
-   fMult = mult;
    fIon.reserve(fMult);
-
-   fBeamEnergy_buff = ResEner;
-   fBeamMass = BMass;
-   fTargetMass = TMass;
-   fZBeam = ZB;
-   fABeam = AB;
-   fPxBeam = PxB;
-   fPyBeam = PyB;
-   fPzBeam = PzB;
 
    for (Int_t i = 0; i < fMult; i++) {
 
@@ -69,7 +46,7 @@ AtTPCIonPhaseSpace::AtTPCIonPhaseSpace(const char *name, std::vector<Int_t> *z, 
       fPz.push_back(Double_t(a->at(i)) * pz->at(i));
       Masses.push_back(mass->at(i));
 
-      FairIon *IonBuff =
+      auto *IonBuff =
          new FairIon(TString::Format("Product_Ion%d", i).Data(), z->at(i), a->at(i), q->at(i), 0.0, mass->at(i));
       // FairIon *IonBuff = new FairIon(buffer, z->at(i), a->at(i), q->at(i));
       // std::cout<<" Z "<<z->at(i)<<" A "<<a->at(i)<<std::endl;
@@ -85,16 +62,10 @@ AtTPCIonPhaseSpace::AtTPCIonPhaseSpace(const char *name, std::vector<Int_t> *z, 
    }
 
    for (Int_t i = 0; i < fMult; i++) {
-      run->AddNewIon(fIon.at(i));
+      run->AddNewIon(fIon.at(i)); // NOLINT
       std::cout << " Z " << z->at(i) << " A " << a->at(i) << std::endl;
       std::cout << fIon.at(i)->GetName() << std::endl;
    }
-}
-
-// -----   Destructor   ---------------------------------------------------
-AtTPCIonPhaseSpace::~AtTPCIonPhaseSpace()
-{
-   // if (fIon) delete fIon;
 }
 
 // -----   Public method ReadEvent   --------------------------------------
@@ -134,9 +105,9 @@ Bool_t AtTPCIonPhaseSpace::ReadEvent(FairPrimaryGenerator *primGen)
    TLorentzVector fEnergyImpulsionFinal;
    TVector3 fImpulsionLab_beam;
    TVector3 fImpulsionLab_target;
-   TLorentzVector *p1;
-   TLorentzVector *p2;
-   TLorentzVector *p3;
+   TLorentzVector *p1 = nullptr;
+   TLorentzVector *p2 = nullptr;
+   TLorentzVector *p3 = nullptr;
    std::vector<TLorentzVector *> p_vector;
    TGenPhaseSpace event1;
 
@@ -148,17 +119,15 @@ Bool_t AtTPCIonPhaseSpace::ReadEvent(FairPrimaryGenerator *primGen)
    fPy.resize(fMult);
    fPx.resize(fMult);
 
-   AtStack *stack = (AtStack *)gMC->GetStack();
-
    fIsDecay = kFALSE;
 
-   // gAtVP->Test();
+   // AtVertexPropagator::Instance()->Test();
 
    // FairMCEventHeader* MCEventHeader = primGen->GetEvent();
    // std::cout<<" Event ID : "<<MCEventHeader->GetRunID()<<std::cout;
 
    // gMC->CurrentMedium();
-   // TVirtualMC* vMC =gMC->GetMC();
+   // TVgirtualMC* vMC =gMC->GetMC();
    // if(!vMC->CurrentEvent()) std::cout<<" No events!"<<std::endl;
 
    // std::cout<<" Current Track Number : "<<stack->GetCurrentTrackNumber()<<std::endl;
@@ -185,11 +154,11 @@ Bool_t AtTPCIonPhaseSpace::ReadEvent(FairPrimaryGenerator *primGen)
 
    // fBeamEnergy = fBeamEnergy_buff/1000.0; //GeV
 
-   fBeamEnergy = gAtVP->GetEnergy() / 1000.0;
-   std::cout << " Residual energy in AtTPCIonPhaseSpace : " << gAtVP->GetEnergy() << std::endl;
-   fPxBeam = gAtVP->GetPx();
-   fPyBeam = gAtVP->GetPy();
-   fPzBeam = gAtVP->GetPz();
+   fBeamEnergy = AtVertexPropagator::Instance()->GetEnergy() / 1000.0;
+   std::cout << " Residual energy in AtTPCIonPhaseSpace : " << AtVertexPropagator::Instance()->GetEnergy() << std::endl;
+   fPxBeam = AtVertexPropagator::Instance()->GetPx();
+   fPyBeam = AtVertexPropagator::Instance()->GetPy();
+   fPzBeam = AtVertexPropagator::Instance()->GetPz();
 
    Double_t beta;
    Double_t s = 0.0;
@@ -214,7 +183,6 @@ Bool_t AtTPCIonPhaseSpace::ReadEvent(FairPrimaryGenerator *primGen)
 
    fEnergyImpulsionLab_Total = fEnergyImpulsionLab_beam + fEnergyImpulsionLab_target;
    s = fEnergyImpulsionLab_Total.M2();
-   beta = fEnergyImpulsionLab_Total.Beta();
 
    std::cout << " fABeam : " << fABeam << " fPzBeam : " << fPzBeam << " fBeamEnergy : " << fBeamEnergy << std::endl;
 
@@ -237,7 +205,7 @@ Bool_t AtTPCIonPhaseSpace::ReadEvent(FairPrimaryGenerator *primGen)
       fIsDecay = kTRUE;
 
       event1.SetDecay(fEnergyImpulsionLab_Total, fMult, mass_1);
-      Double_t weight1 = event1.Generate();
+      // Double_t weight1 = event1.Generate();
 
       /* p1  = event1.GetDecay(0);
        p2  = event1.GetDecay(1);
@@ -300,9 +268,9 @@ Bool_t AtTPCIonPhaseSpace::ReadEvent(FairPrimaryGenerator *primGen)
 
       // Propagate the vertex of the previous event
 
-      fVx = gAtVP->GetVx();
-      fVy = gAtVP->GetVy();
-      fVz = gAtVP->GetVz();
+      fVx = AtVertexPropagator::Instance()->GetVx();
+      fVy = AtVertexPropagator::Instance()->GetVy();
+      fVz = AtVertexPropagator::Instance()->GetVz();
 
       std::cout << "-I- FairIonGenerator: Generating " << fMult << " with mass " << thisPart->Mass() << " ions of type "
                 << fIon.at(i)->GetName() << " (PDG code " << pdgType << ")" << std::endl;
@@ -314,7 +282,7 @@ Bool_t AtTPCIonPhaseSpace::ReadEvent(FairPrimaryGenerator *primGen)
       }
    }
 
-   gAtVP->IncDecayEvtCnt();
+   AtVertexPropagator::Instance()->IncDecayEvtCnt();
 
    return kTRUE;
 }

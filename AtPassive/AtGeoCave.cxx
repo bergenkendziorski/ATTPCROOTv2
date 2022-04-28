@@ -20,15 +20,18 @@
 
 #include "AtGeoCave.h"
 
-#include "FairGeoBasicShape.h" // for FairGeoBasicShape
-#include "FairGeoMedia.h"      // for FairGeoMedia
-#include "FairGeoMedium.h"     // for FairGeoMedium
-#include "FairGeoNode.h"       // for FairGeoNode, etc
-#include "FairGeoShapes.h"     // for FairGeoShapes
+#include <FairGeoBasicShape.h> // for FairGeoBasicShape
+#include <FairGeoMedia.h>      // for FairGeoMedia
+#include <FairGeoMedium.h>     // for FairGeoMedium
+#include <FairGeoNode.h>       // for FairGeoNode, etc
+#include <FairGeoSet.h>
+#include <FairGeoShapes.h> // for FairGeoShapes
 
-#include "TList.h" // for TList
+#include <Rtypes.h>
+#include <TList.h> // for TList
+#include <TString.h>
 
-#include <string.h> // for strcmp
+#include <cstring>  // for strcmp
 #include <iostream> // for cout
 
 using namespace std;
@@ -39,7 +42,7 @@ ClassImp(AtGeoCave)
 {
    // Constructor
    fName = "cave";
-   name = "cave";
+
    maxModules = 1;
 }
 
@@ -51,8 +54,8 @@ Bool_t AtGeoCave::read(fstream &fin, FairGeoMedia *media)
    }
    const Int_t maxbuf = 256;
    char buf[maxbuf];
-   FairGeoNode *volu = 0;
-   FairGeoMedium *medium;
+   FairGeoNode *volu = nullptr;
+   FairGeoMedium *medium = nullptr;
    Bool_t rc = kTRUE;
    do {
       fin.getline(buf, maxbuf);
@@ -94,7 +97,7 @@ Bool_t AtGeoCave::read(fstream &fin, FairGeoMedia *media)
       masterNodes->Add(new FairGeoNode(*volu));
    } else {
       delete volu;
-      volu = 0;
+      volu = nullptr;
       rc = kFALSE;
    }
    return rc;

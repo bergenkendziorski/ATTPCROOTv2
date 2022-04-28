@@ -6,11 +6,18 @@
 #define ATCLUSTERIZELINETASK_H
 
 #include "AtClusterizeTask.h"
-#include "Math/Vector3D.h"
+
+#include <FairTask.h>
+
+#include <Rtypes.h>
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtClusterizeLineTask : public AtClusterizeTask {
 private:
-   Double_t fTBTime; //!< Width of a time bucket [us]
+   Double_t fTBTime{}; //!< Width of a time bucket [us]
 
 protected:
    virtual void getParameters() override;

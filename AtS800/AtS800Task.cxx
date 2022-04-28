@@ -1,25 +1,15 @@
 
 #include "AtS800Task.h"
 
-// FAIRROOT classes
-#include "FairRootManager.h"
-#include "FairRun.h"
-#include "FairRuntimeDb.h"
+#include <FairLogger.h>
+#include <FairRun.h>
+#include <FairTask.h>
 
-#include <iostream>
+#include <memory>
+
+class FairRuntimeDb;
 
 ClassImp(AtS800Task);
-
-AtS800Task::AtS800Task()
-{
-
-   fLogger = FairLogger::GetLogger();
-
-   kIsPersistence = kFALSE;
-   kIsFullMode = kFALSE;
-}
-
-AtS800Task::~AtS800Task() {}
 
 void AtS800Task::SetPersistence(Bool_t value)
 {
@@ -62,8 +52,10 @@ void AtS800Task::SetParContainers()
 {
 
    FairRun *run = FairRun::Instance();
-   if (!run)
+   if (!run) {
       LOG(fatal) << "No analysis run!";
+      return;
+   }
 
    FairRuntimeDb *db = run->GetRuntimeDb();
    if (!db)

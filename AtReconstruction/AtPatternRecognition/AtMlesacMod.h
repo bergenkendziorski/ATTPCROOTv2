@@ -7,46 +7,25 @@
 #ifndef AtMlesacMOD_H
 #define AtMlesacMOD_H
 
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
-#include <chrono>
-#include <ctime>
-#include <vector>
-
-// FairRoot classes
-#include "FairRootManager.h"
-#include "FairLogger.h"
-
-// ROOT Headers
-#include <TObject.h>
-#include <TMath.h>
-#include <TVector3.h>
-#include <TRandom.h>
-#include "TApplication.h"
-#include "TROOT.h"
-
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-#include "AtHit.h"
-#include "AtEvent.h"
-#include "AtProtoEvent.h"
-#include "AtProtoQuadrant.h"
-#include "AtDigiPar.h"
-#include "AtTpcMap.h"
-#include "AtTrack.h"
+#include "AtTrack.h" // for AtTrack
 
-using namespace std;
+#include <Rtypes.h>   // for Int_t, Double_t, THashConsistencyHolder, ClassDef
+#include <TObject.h>  // for TObject
+#include <TVector3.h> // for TVector3
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+#include <stdio.h> // for size_t
+
+#include <algorithm> // for max
+#include <utility>   // for pair
+#include <vector>    // for vector
+class AtEvent;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtMlesacMod : public TObject {
 
@@ -57,7 +36,7 @@ public:
    void Reset();
    void Init(AtEvent *event);
    void Solve();
-   std::vector<int> RandSam(vector<int> indX, Int_t mode);
+   std::vector<int> RandSam(std::vector<int> indX, Int_t mode);
    void EstimModel(const std::vector<int> samplesIdx);
    double EstimError(int i);
    void CalcMlesacMod(AtEvent *event);
@@ -110,20 +89,20 @@ protected:
    std::pair<Int_t, Int_t> fVertex_tracks; // ID of the tracks that form the best vertex
    Int_t fLineDistThreshold;
    Int_t fRandSamplMode;
-   Int_t fVertexMod;
+   Int_t fVertexMod{};
 
    std::vector<double> vX, vY, vZ, vQ;
    std::vector<double> vTrackCharge;
    float fMlesacMinPoints;
-   float fMlesacPointThreshold;
-   float fMlesacChargeThreshold;
+   float fMlesacPointThreshold{};
+   float fMlesacChargeThreshold{};
    float fMlesacThreshold;
    float fMlesacMaxIteration;
-   int fNumberOfTracksMax;
-   int fOriginalCloudSize;
-   double fTotalCharge;
-   int fVerbose;
-   double Avcharge;
+   int fNumberOfTracksMax{};
+   int fOriginalCloudSize{};
+   double fTotalCharge{};
+   int fVerbose{};
+   double Avcharge{};
    double fChargeThres;
 
 public:

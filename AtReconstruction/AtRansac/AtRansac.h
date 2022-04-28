@@ -7,99 +7,51 @@
 #ifndef AtRANSAC_H
 #define AtRANSAC_H
 
+/*
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+*/
 
-#include <fstream>
-#include <iostream>
-#include <string>
+#include "AtTrack.h" // for AtTrack
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <Math/Vector3Dfwd.h> // for XYZVector
+#include <Rtypes.h>           // for Double_t, Int_t, Float_t, THashConsist...
+#include <TGraph2D.h>         // for TGraph2D
+#include <TObject.h>          // for TObject
+#include <TVector3.h>         // for TVector3
 
-#include "TH1.h"
-#include "TCanvas.h"
-#include "TGraph2D.h"
-#include "TGraph.h"
-#include "TH2.h"
-#include "TMath.h"
-#include "TApplication.h"
-#include "TROOT.h"
-#include "TF1.h"
-#include "Math/Minimizer.h"
-#include "Math/Factory.h"
-#include "Math/Functor.h"
-#include "Fit/Fitter.h"
-#include <Math/Vector3D.h>
-#include "TRotation.h"
-#include "TMatrixD.h"
-#include "TArrayD.h"
-#include "TVectorD.h"
-
-#include "Math/GenVector/Rotation3D.h"
-#include "Math/GenVector/EulerAngles.h"
-#include "Math/GenVector/AxisAngle.h"
-#include "Math/GenVector/Quaternion.h"
-#include "Math/GenVector/RotationX.h"
-#include "Math/GenVector/RotationY.h"
-#include "Math/GenVector/RotationZ.h"
-#include "Math/GenVector/RotationZYX.h"
-
-#include "AtHit.h"
-#include "AtEvent.h"
-#include "AtProtoEvent.h"
-#include "AtProtoQuadrant.h"
-#include "AtDigiPar.h"
-#include "AtTpcMap.h"
-#include "AtTrack.h"
-
-// FairRoot classes
-#include "FairRootManager.h"
-#include "FairLogger.h"
-
-//#ifndef __CINT__ // Boost
-//#include <boost/multi_array.hpp>
-//#endif //__CINT__
-
-#include "TObject.h"
-
-//#include "mmprivate.h"
-//#undef BLOCKSIZE
-// Needed to avoid clash with FLANN library
-// PCL
-#include <iostream>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
-#include <pcl/console/parse.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
-#include <pcl/sample_consensus/ransac.h>
-#include <pcl/sample_consensus/sac_model_plane.h>
-#include <pcl/sample_consensus/sac_model_sphere.h>
-#pragma GCC diagnostic pop
-
-//#include <pcl/visualization/pcl_visualizer.h>
-#include <boost/thread/thread.hpp>
-
-#include <pcl/ModelCoefficients.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/filters/extract_indices.h>
-#include <boost/shared_ptr.hpp>
-
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+#include <cassert> // for assert
+#include <fstream> // for operator<<, endl, basic_ostream, basic...
+#include <utility> // for pair
+#include <vector>  // for vector
+class AtEvent;
+class AtHit;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 namespace AtRANSACN {
 
 class AtRansac : public TObject {
+protected:
+   TVector3 fVertex_1{-10000, -10000, -10000};
+   TVector3 fVertex_2{-10000, -10000, -10000};
+   TVector3 fVertex_mean;
+   Double_t fMinimum{-1};
+   Int_t fLineDistThreshold{3};
+   int fRANSACModel;
+   Float_t fRANSACThreshold{5};
+   Double_t fXCenter{0};
+   Double_t fYCenter{0};
+   Float_t fRANSACPointThreshold{0.01};    // Number of points in percentage
+   std::pair<Int_t, Int_t> fVertex_tracks; // ID of the tracks that form the best vertex
+   Double_t fVertexTime{-1000};
+   Double_t fTiltAng{0}; // From parameter file
+   Int_t fMinHitsLine{}; // Minimum number of hits per line
+
+   std::vector<AtTrack> fRansacTracks;
+   std::vector<AtTrack> fTrackCand; // Candidate tracks
 
 public:
    AtRansac();
@@ -107,8 +59,7 @@ public:
 
    void CalcRANSAC(AtEvent *event);
    void CalcRANSACFull(AtEvent *event);
-   std::vector<AtTrack> *RansacPCL(AtEvent *event);
-   std::vector<AtTrack> *Ransac(std::vector<AtHit> *hits);
+   std::vector<AtTrack> *RansacPCL(const std::vector<AtHit> &hits);
    TVector3 GetVertex1();
    TVector3 GetVertex2();
    Double_t GetVertexTime();
@@ -118,14 +69,11 @@ public:
    Double_t GetMinimum(); // Distance of minumum approach between candidate lines (for the moment only 2)
    TVector3 GetVertexMean();
    Int_t MinimizeTrack(AtTrack *track);
-   Int_t MinimizeTrackRPhi(AtTrack *track);
    std::vector<AtTrack> &GetTrackCand();
    void SetModelType(int model);                 // RANSAC Model: Line, plane...
    void SetDistanceThreshold(Float_t threshold); // Distance to RANSAC line
    void SetMinHitsLine(Int_t nhits);
    void SetTiltAngle(Double_t val);
-   void
-   SetRPhiSpace(); // For RxPhi Ransac calculation (eventually will be moved into a template, when I have the time...)
    void SetXYCenter(Double_t xc, Double_t yc);
    void SetRANSACPointThreshold(Float_t val);
    void SetVertexTime(Double_t val);
@@ -152,25 +100,6 @@ protected:
    void SetLine(double t, const double *p, double &x, double &y, double &z);
    void FindVertex(std::vector<AtTrack *> tracks);
    Bool_t CheckTrackID(Int_t trackID, std::vector<AtTrack> *trackArray); // Check if Track ID is in the list
-
-   TVector3 fVertex_1;
-   TVector3 fVertex_2;
-   TVector3 fVertex_mean;
-   Double_t fMinimum;
-   std::vector<AtTrack> fTrackCand; // Candidate tracks
-   Int_t fLineDistThreshold;
-   int fRANSACModel;
-   Float_t fRANSACThreshold;
-   Bool_t fRPhiSpace;
-   Double_t fXCenter;
-   Double_t fYCenter;
-   Float_t fRANSACPointThreshold;          // Number of points in percentage
-   std::pair<Int_t, Int_t> fVertex_tracks; // ID of the tracks that form the best vertex
-   Double_t fVertexTime;
-   Double_t fTiltAng;  // From parameter file
-   Int_t fMinHitsLine; // Minimum number of hits per line
-
-   std::vector<AtTrack> fRansacTracks;
 
    struct SumDistance2 {
       TGraph2D *fGraph;
@@ -205,7 +134,7 @@ protected:
    friend inline std::ostream &operator<<(std::ostream &o, const AtRANSACN::AtRansac::PairedLines &pl)
    {
 
-      o << cGREEN << " =============================================== " << std::endl;
+      o << " =============================================== " << std::endl;
       o << " Lines ID : " << pl.LinesID.first << " - " << pl.LinesID.second << std::endl;
       o << " Minimum distance between line : " << pl.minDist << std::endl;
       o << " Mean vertex between line - X : " << pl.meanVertex.X() << "  - Y : " << pl.meanVertex.Y()
@@ -216,7 +145,7 @@ protected:
         << std::endl;
       o << " Angle with Y detector axis - Line 1 : " << pl.AngleYDet.first << "  - Line 2 : " << pl.AngleYDet.second
         << std::endl;
-      o << " Angle between lines : " << pl.angle << cNORMAL << std::endl;
+      o << " Angle between lines : " << pl.angle << std::endl;
       return o;
    }
 

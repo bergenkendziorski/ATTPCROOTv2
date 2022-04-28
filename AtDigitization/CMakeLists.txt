@@ -3,28 +3,20 @@
 Set(LINKDEF AtDigiLinkDef.h)
 Set(LIBRARY_NAME AtDigitization)
 Set(DEPENDENCIES
-  Base
-  FairTools
+  FairRoot::Base
+  FairRoot::FairTools
 
   ROOT::Core
   ROOT::GenVector
   
-  AtData
-  AtParameter
-  AtReconstruction
-  AtTpcMap
-)
-
-set(INCLUDE_DIRECTORIES
-  ${BASE_INCLUDE_DIRECTORIES}
-)
-set(LINK_DIRECTORIES
-${FAIRROOT_LIBRARY_DIR}
+  ATTPCROOT::AtSimulationData
+  ATTPCROOT::AtParameter
+  ATTPCROOT::AtData
+  ATTPCROOT::AtMap
 )
 
 set(SRCS
 # Add all the source files below this line.
-AtAvalancheTask.cxx
 AtClusterizeTask.cxx
 AtClusterizeLineTask.cxx
 AtPulseTask.cxx
@@ -35,10 +27,8 @@ AtTrigger.cxx
 AtTriggerTask.cxx
 )
 
-generate_target_root_library(${LIBRARY_NAME}
+generate_target_and_root_library(${LIBRARY_NAME}
   LINKDEF ${LINKDEF}
   SRCS ${SRCS}
-  INCLUDE_DIR ${INCLUDE_DIRECTORIES}
-  LIBRARY_DIR ${LINK_DIRECTORIES}
   DEPS_PUBLIC ${DEPENDENCIES}
   )

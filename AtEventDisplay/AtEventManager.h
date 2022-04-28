@@ -1,22 +1,19 @@
 #ifndef AtEVENTMANAGER_H
 #define AtEVENTMANAGER_H
 
-#include "TEveEventManager.h"
-#include "FairEventManager.h"
-#include "TGNumberEntry.h"
-#include "TGCanvas.h"
+#include <FairRunAna.h>
 
-#include "FairRunAna.h"
-#include "FairRootManager.h"
-#include "FairTask.h"
+#include <Rtypes.h>
+#include <TEveEventManager.h>
 
-#include "TCanvas.h"
-#include "TFile.h"
-
-#ifndef __CINT__ // Boost
-#include <boost/multi_array.hpp>
-#endif //__CINT__
-
+class FairRootManager;
+class FairTask;
+class TBuffer;
+class TCanvas;
+class TClass;
+class TGNumberEntry;
+class TGTextButton;
+class TMemberInspector;
 class TGListTreeItem;
 
 class AtEventManager : public TEveEventManager {
@@ -93,19 +90,19 @@ private:
    TCanvas *fPadAll;
    TCanvas *fCvsQEvent;
    TCanvas *fCvsHough;
-   TCanvas *fCvsPhi;
-   TCanvas *fCvsMesh;
-   TCanvas *fCvs3DHist;
+   TCanvas *fCvsPhi{};
+   TCanvas *fCvsMesh{};
+   TCanvas *fCvs3DHist{};
    TCanvas *fCvsRad;
-   TCanvas *fCvsTheta;
-   TCanvas *fCvsThetaxPhi;
-   TCanvas *fCvsQuadrant1;
-   TCanvas *fCvsQuadrant2;
-   TCanvas *fCvsQuadrant3;
-   TCanvas *fCvsQuadrant4;
-   TCanvas *fCvsMC_XY;
-   TCanvas *fCvsMC_Z;
-   TCanvas *fCvsAux;
+   TCanvas *fCvsTheta{};
+   TCanvas *fCvsThetaxPhi{};
+   TCanvas *fCvsQuadrant1{};
+   TCanvas *fCvsQuadrant2{};
+   TCanvas *fCvsQuadrant3{};
+   TCanvas *fCvsQuadrant4{};
+   TCanvas *fCvsMC_XY{};
+   TCanvas *fCvsMC_Z{};
+   TCanvas *fCvsAux{};
 
    TGTextButton *drawallpad;
    TGTextButton *eraseQevent;

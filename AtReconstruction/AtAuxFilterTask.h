@@ -8,13 +8,16 @@
  */
 
 // FairRoot classes
-#include "FairTask.h"
+#include <FairTask.h>
+// ROOT classes
+#include <Rtypes.h>
+#include <TString.h>
+
+#include <string>
+#include <vector>
 
 // ATTPCROOT classes;
 class AtFilter;
-
-// ROOT classes
-#include "TString.h"
 class TClonesArray;
 
 using stringVec = std::vector<std::string>;
@@ -22,7 +25,7 @@ using stringVec = std::vector<std::string>;
 class AtAuxFilterTask : public FairTask {
 
 private:
-   TClonesArray *fInputEventArray; // AtRawEvent
+   TClonesArray *fInputEventArray{}; // AtRawEvent
    TString fInputEventBranchName;
 
    AtFilter *fFilter;

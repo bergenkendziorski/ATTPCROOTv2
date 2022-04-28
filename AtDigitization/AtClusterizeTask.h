@@ -8,35 +8,41 @@
 #ifndef AtClusterizeTask_H
 #define AtClusterizeTask_H
 
-#include "FairTask.h"
-#include "Math/Vector3D.h"
+#include <FairTask.h>
 
-class AtGas;
+#include <Math/Vector3D.h>
+#include <Math/Vector3Dfwd.h>
+#include <Rtypes.h>
+#include <TClonesArray.h>
+
+#include <cmath>
+#include <memory>
+
 class AtDigiPar;
 class AtMCPoint;
-
-class TClonesArray;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtClusterizeTask : public FairTask {
 protected:
-   Int_t fEventID;        //!< EventID
-   Double_t fEIonize;     //!< Effective ionization energy of gas. [eV]
-   Double_t fFano;        //!< Fano factor of the gas
-   Double_t fVelDrift;    //!< Drift velocity of electron in gas. [mm/ns]
-   Double_t fCoefT;       //!< Transversal diffusion coefficient. [mm^(-1/2)]
-   Double_t fCoefL;       //!< Longitudinal diffusion coefficient. [mm^(-1/2)]
-   Double_t fDetPadPlane; //!< Position of the pad plane with respect to the entrance [mm]
+   Int_t fEventID{0};       //!< EventID
+   Double_t fEIonize{};     //!< Effective ionization energy of gas. [eV]
+   Double_t fFano{};        //!< Fano factor of the gas
+   Double_t fVelDrift{};    //!< Drift velocity of electron in gas. [mm/ns]
+   Double_t fCoefT{};       //!< Transversal diffusion coefficient. [mm^(-1/2)]
+   Double_t fCoefL{};       //!< Longitudinal diffusion coefficient. [mm^(-1/2)]
+   Double_t fDetPadPlane{}; //!< Position of the pad plane with respect to the entrance [mm]
 
-   AtGas *fGas;     //!< Gas parameter container.
-   AtDigiPar *fPar; //!< Base parameter container.
+   AtDigiPar *fPar{}; //!< Base parameter container.
 
-   TClonesArray *fMCPointArray;
-   AtMCPoint *fMCPoint;
-   TClonesArray *fSimulatedPointArray; //!< Primary cluster array
-   Bool_t fIsPersistent;               //!< If true, save container
+   TClonesArray *fMCPointArray{};
+   AtMCPoint *fMCPoint{};
+   std::unique_ptr<TClonesArray> fSimulatedPointArray{nullptr}; //!< Primary cluster array
+   Bool_t fIsPersistent{false};                                 //!< If true, save container
 
    ROOT::Math::XYZVector fPrevPoint;
-   Int_t fCurrTrackID;
+   Int_t fCurrTrackID{};
 
 private:
    ROOT::Math::XYZVector applyDiffusion(const ROOT::Math::XYZVector &loc, double_t sigTrans, double sigLong);

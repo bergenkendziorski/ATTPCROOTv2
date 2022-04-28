@@ -9,9 +9,15 @@
 
 #include "AtTpcGeoPar.h"
 
-#include "FairRuntimeDb.h"
+#include <FairContFact.h>
+#include <FairRuntimeDb.h>
 
-#include <iostream>
+#include <TList.h>
+#include <TString.h>
+
+#include <cstring>
+
+class FairParSet;
 
 ClassImp(AtTpcContFact)
 
@@ -32,8 +38,8 @@ void AtTpcContFact::setAllContainers()
        contexts and adds them to
        the list of containers for the AtTpc library.
    */
-
-   FairContainer *p = new FairContainer("AtTpcGeoPar", "AtTpc Geometry Parameters", "TestDefaultContext");
+   // NOLINTNEXTLINE I think FairRoot owns this memory
+   auto *p = new FairContainer("AtTpcGeoPar", "AtTpc Geometry Parameters", "TestDefaultContext");
    p->addContext("TestNonDefaultContext");
 
    containers->Add(p);
@@ -47,7 +53,7 @@ FairParSet *AtTpcContFact::createContainer(FairContainer *c)
        of this container, the name is concatinated with the context.
    */
    const char *name = c->GetName();
-   FairParSet *p = NULL;
+   FairParSet *p = nullptr;
    if (strcmp(name, "AtTpcGeoPar") == 0) {
       p = new AtTpcGeoPar(c->getConcatName().Data(), c->GetTitle(), c->getContext());
    }

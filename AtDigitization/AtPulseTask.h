@@ -8,16 +8,27 @@
 #ifndef AtPulseTask_H
 #define AtPulseTask_H
 
-#include "FairTask.h"
+#include <FairTask.h>
 
-class TClonesArray;
+#include <Rtypes.h>
+#include <TClonesArray.h>
+#include <TF1.h> //Needed for unique_ptr<TF1>
+#include <TH1.h> //Needed for unique_ptr<TH1F>
+
+#include <cstddef>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <vector>
+
 class AtDigiPar;
 class AtMap;
 class AtRawEvent;
-class TF1;
-class TH1F;
 class TH2Poly;
 class AtSimulatedPoint;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 using AtMapPtr = std::shared_ptr<AtMap>;
 
@@ -26,7 +37,7 @@ class AtPulseTask : public FairTask {
 protected:
    AtMapPtr fMap; //!< AtTPC map
 
-   AtDigiPar *fPar;             //!< Base parameter container.
+   AtDigiPar *fPar{};           //!< Base parameter container.
    Int_t fEventID = 0;          //!< EventID
    Double_t fGain = 0;          //!< Micromegas gain.
    Double_t fLowGainFactor = 0; //! If pad is AtMap::kLowGain multiply gain by this factor
@@ -41,18 +52,19 @@ protected:
    Bool_t fIsSaveMCInfo = kFALSE; //!<< Propagates MC information
    Bool_t fUseFastGain = kTRUE;
 
-   TClonesArray *fSimulatedPointArray; //!< drifted electron array (input)
-   TClonesArray *fRawEventArray;       //!< Raw Event array(only one)
-   TClonesArray *fMCPointArray;        //!< MC Point Array
-   AtRawEvent *fRawEvent;              //!< Raw Event Object
-   TH2Poly *fPadPlane;                 //!< pad plane
+   TClonesArray *fSimulatedPointArray{}; //!< drifted electron array (input)
+   TClonesArray fRawEventArray;          //!< Raw Event array(only one)
+   TClonesArray *fMCPointArray{};        //!< MC Point Array
 
-   std::map<Int_t, TH1F *> electronsMap;          //!<
-   TH1F **eleAccumulated;                         //!<
-   std::multimap<Int_t, std::size_t> MCPointsMap; //!< Correspondance between MC Points and pads
+   AtRawEvent *fRawEvent{}; //!< Raw Event Object
+   TH2Poly *fPadPlane{};    //!< pad plane
 
-   TF1 *gain; //!<
-   Double_t avgGainDeviation;
+   std::map<Int_t, TH1F *> electronsMap;              //!<
+   std::vector<std::unique_ptr<TH1F>> eleAccumulated; //!<
+   std::multimap<Int_t, std::size_t> MCPointsMap;     //!< [padNum] = mcPointID
+
+   std::unique_ptr<TF1> gain; //!<
+   Double_t avgGainDeviation{};
 
    void saveMCInfo(int mcPointID, int padNumber, int trackID);
    void setParameters();
@@ -68,7 +80,7 @@ protected:
 public:
    AtPulseTask();
    AtPulseTask(const char *name);
-   ~AtPulseTask();
+   ~AtPulseTask() = default;
 
    void SetLowGainFactor(Double_t factor) { fLowGainFactor = factor; }
    void SetPersistence(Bool_t val) { fIsPersistent = val; }

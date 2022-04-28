@@ -1,48 +1,17 @@
 #include "AtTPCFissionGenerator.h"
 
-#include "FairPrimaryGenerator.h"
-#include "FairRootManager.h"
-#include "FairLogger.h"
-#include "FairMCEventHeader.h"
+#include <TDatabasePDG.h>
+#include <TFile.h>
+#include <TObject.h>
+#include <TTree.h>
 
-#include "FairIon.h"
-#include "FairParticle.h"
-#include "FairRunSim.h"
-#include "FairRunAna.h"
-
-#include "TDatabasePDG.h"
-#include "TParticlePDG.h"
-#include "TObjArray.h"
-
-#include "TRandom.h"
-#include "TMath.h"
-#include "TLorentzVector.h"
-#include "TVector3.h"
-#include "TGenPhaseSpace.h"
-#include "TVirtualMC.h"
-#include "TParticle.h"
-#include "TClonesArray.h"
-#include "TFile.h"
-#include "TTree.h"
-#include "TTreeReader.h"
-#include "TTreePlayer.h"
-#include "TTreeReaderValue.h"
-
-#include "FairRunSim.h"
-#include "FairIon.h"
+#include <cstdlib>
 #include <iostream>
-#include "TParticle.h"
 
-#include "AtStack.h"
-#include "AtVertexPropagator.h"
-#include "AtEulerTransformation.h"
-
-#include "TVector3.h"
-
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
 
 AtTPCFissionGenerator::AtTPCFissionGenerator()
    : fP1x(0.), fP1y(0.), fP1z(0.), fP2x(0.), fP2y(0.), fP2z(0.), fVx(0.), fVy(0.), fVz(0.)
@@ -52,24 +21,24 @@ AtTPCFissionGenerator::AtTPCFissionGenerator()
 }
 
 AtTPCFissionGenerator::AtTPCFissionGenerator(const char *name, TString simfile)
-   : fP1x(0.), fP1y(0.), fP1z(0.), fP2x(0.), fP2y(0.), fP2z(0.), fVx(0.), fVy(0.), fVz(0.)
+   : fP1x(0.), fP1y(0.), fP1z(0.), fP2x(0.), fP2y(0.), fP2z(0.), fPDG(TDatabasePDG::Instance()), fVx(0.), fVy(0.),
+     fVz(0.)
 {
 
-   fPDG = TDatabasePDG::Instance();
    // INCL+ABLA file
    // simfile ="240Cf.root";
    TString dir = getenv("VMCWORKDIR");
    TString simfilepath = dir + "/macro/Simulation/data/" + simfile;
-   TFile *f = new TFile(simfilepath.Data());
+   auto *f = new TFile(simfilepath.Data()); // NOLINT (owned by root)
    if (f->IsZombie()) {
       std::cout << cRED << " AtTPCFissionGenerator: No simulation file found! Check VMCWORKDIR variable. Exiting... "
                 << cNORMAL << std::endl;
-      delete f;
+      return;
    } else
       std::cout << cGREEN << " AtTPCFissionGenerator : Prototype geometry found in : " << simfilepath.Data() << cNORMAL
                 << std::endl;
 
-   fTree = (TTree *)f->Get("tree101");
+   fTree = dynamic_cast<TTree *>(f->Get("tree101"));
    Int_t nEvents = fTree->GetEntriesFast();
    std::cout << " Number of events : " << nEvents << std::endl;
    fTree->SetBranchAddress("Evnt", &Evnt);
@@ -95,7 +64,7 @@ AtTPCFissionGenerator::AtTPCFissionGenerator(const char *name, TString simfile)
      //std::cout <<cYELLOW<< "AtTPCFissionGenerator: " << nIons << " ions registered."<<cNORMAL<< std::endl;*/
 }
 
-AtTPCFissionGenerator::~AtTPCFissionGenerator() {}
+AtTPCFissionGenerator::~AtTPCFissionGenerator() = default;
 
 Bool_t AtTPCFissionGenerator::ReadEvent(FairPrimaryGenerator *primGen)
 {

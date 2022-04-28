@@ -1,14 +1,17 @@
-#include "fastcluster.h"
 #include "hc.h"
+
+#include "fastcluster.h"
 
 #pragma warning(push, 0)
 #include <pcl/kdtree/kdtree_flann.h>
+
 #include <algorithm>
 #include <fstream>
 #pragma warning(pop)
 
 #pragma warning(push, 0)
 #include <pcl/kdtree/kdtree_flann.h>
+
 #include <algorithm>
 #include <fstream>
 #pragma warning(pop)
@@ -108,7 +111,7 @@ double *calculate_distance_matrix(pcl::PointCloud<pcl::PointXYZI>::ConstPtr clou
 {
    size_t const triplet_size = triplets.size();
    size_t k = 0;
-   double *result = new double[(triplet_size * (triplet_size - 1)) / 2];
+   auto *result = new double[(triplet_size * (triplet_size - 1)) / 2]; // NOLINT
 
    for (size_t i = 0; i < triplet_size; ++i) {
       for (size_t j = i + 1; j < triplet_size; j++) {
@@ -143,8 +146,8 @@ cluster_group compute_hc(pcl::PointCloud<pcl::PointXYZI>::ConstPtr cloud, std::v
       return result;
    }
 
-   double *distance_matrix, *height = new double[triplet_size - 1];
-   int *merge = new int[2 * (triplet_size - 1)], *labels = new int[triplet_size];
+   double *distance_matrix, *height = new double[triplet_size - 1];               // NOLINT
+   int *merge = new int[2 * (triplet_size - 1)], *labels = new int[triplet_size]; // NOLINT
 
    distance_matrix = calculate_distance_matrix(cloud, triplets, triplet_metric);
 
@@ -175,8 +178,8 @@ cluster_group compute_hc(pcl::PointCloud<pcl::PointXYZI>::ConstPtr cloud, std::v
       const char *fname = "debug_ts.csv";
       std::ofstream of(fname);
       if (of.is_open()) {
-         for (size_t i = 0; i < (triplet_size - 1); ++i) {
-            of << height[i] << std::endl;
+         for (size_t iii = 0; i < (triplet_size - 1); ++iii) {
+            of << height[iii] << std::endl;
          }
       } else {
          std::cerr << "Could Not write file '" << fname << "'\n";
@@ -185,10 +188,12 @@ cluster_group compute_hc(pcl::PointCloud<pcl::PointXYZI>::ConstPtr cloud, std::v
    }
 
    // cleanup
+   // NOLINTBEGIN
    delete[] distance_matrix;
    delete[] height;
    delete[] merge;
    delete[] labels;
+   // NOLINTEND
 
    return result;
 }
@@ -197,9 +202,9 @@ cluster_group cleanupClusterGroup(cluster_group const &clusterGroup, size_t m)
 {
    cluster_group cleanedGroup;
    cleanedGroup.bestClusterDistance = clusterGroup.bestClusterDistance;
-   for (size_t i = 0; i < clusterGroup.clusters.size(); i++) {
-      if (clusterGroup.clusters[i].size() >= m)
-         cleanedGroup.clusters.push_back(clusterGroup.clusters[i]);
+   for (const auto &clust : clusterGroup.clusters) {
+      if (clust.size() >= m)
+         cleanedGroup.clusters.push_back(clust);
    }
 
    return cleanedGroup;
@@ -210,13 +215,13 @@ toCluster(std::vector<hc::triplet> const &triplets, hc::cluster_group const &clu
 {
    std::vector<pcl::PointIndicesPtr> result;
 
-   for (std::vector<cluster>::const_iterator currentCluster = clusterGroup.clusters.begin();
-        currentCluster < clusterGroup.clusters.end(); currentCluster++) {
+   for (auto currentCluster = clusterGroup.clusters.begin(); currentCluster < clusterGroup.clusters.end();
+        currentCluster++) {
       pcl::PointIndicesPtr pointIndices(new pcl::PointIndices());
 
       // add point indices
-      for (std::vector<size_t>::const_iterator currentTripletIndex = currentCluster->begin();
-           currentTripletIndex < currentCluster->end(); currentTripletIndex++) {
+      for (auto currentTripletIndex = currentCluster->begin(); currentTripletIndex < currentCluster->end();
+           currentTripletIndex++) {
          hc::triplet const &currentTriplet = triplets[*currentTripletIndex];
 
          pointIndices->indices.push_back((int)currentTriplet.pointIndexA);
@@ -226,13 +231,13 @@ toCluster(std::vector<hc::triplet> const &triplets, hc::cluster_group const &clu
 
       // sort point-indices and remove duplicates
       std::sort(pointIndices->indices.begin(), pointIndices->indices.end());
-      std::vector<int>::iterator newEnd = std::unique(pointIndices->indices.begin(), pointIndices->indices.end());
+      auto newEnd = std::unique(pointIndices->indices.begin(), pointIndices->indices.end());
       pointIndices->indices.resize(std::distance(pointIndices->indices.begin(), newEnd));
 
       result.push_back(pointIndices);
    }
 
-   return Cluster(result, pointIndexCount);
+   return {result, pointIndexCount};
 }
 
 ScaleTripletMetric::ScaleTripletMetric(float s)

@@ -1,5 +1,9 @@
 #include "S800.h"
 
+#include "S800defs.h"
+
+#include <cstdio>
+
 int S800::DecodeS800(unsigned short *pevent, unsigned short twords)
 {
    long long int n;
@@ -143,7 +147,7 @@ unsigned short *S800::DecodeS800TimeOfFlight(unsigned short *p)
       else if (ch == 4)
          tac_xfp = (tmp)&0xfff;
       else if (ch > 0 && ch < 8)
-         dum = (tmp)&0xfff;
+         dum = (tmp)&0xfff; // NOLINT
       words--;
    }
    this->GetTimeOfFlight()->Set(rf, obj, xfp, si);

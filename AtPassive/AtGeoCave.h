@@ -15,11 +15,16 @@
 #ifndef MYGEOCAVE_H
 #define MYGEOCAVE_H
 
-#include "FairGeoSet.h" // for FairGeoSet
-#include "Rtypes.h"     // for AtGeoCave::Class, Bool_t, etc
-#include "TString.h"    // for TString
+#include <FairGeoSet.h> // for FairGeoSet
+
+#include <Rtypes.h>  // for AtGeoCave::Class, Bool_t, etc
+#include <TString.h> // for TString
 
 #include <fstream> // for fstream
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 using namespace std;
 
@@ -27,7 +32,7 @@ class FairGeoMedia;
 
 class AtGeoCave : public FairGeoSet {
 protected:
-   TString name;
+   TString name{"cave"};
 
 public:
    AtGeoCave();

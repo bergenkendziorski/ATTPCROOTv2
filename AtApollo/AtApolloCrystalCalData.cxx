@@ -8,6 +8,8 @@
 
 #include "AtApolloCrystalCalData.h"
 
+#include <FairMultiLinkedData.h>
+
 #include <iostream>
 
 using std::cout;
@@ -22,9 +24,8 @@ AtApolloCrystalCalData::AtApolloCrystalCalData(Int_t ident, Double_t energy, ULo
 }
 
 AtApolloCrystalCalData::AtApolloCrystalCalData(const AtApolloCrystalCalData &right)
-   : FairMultiLinkedData(right), fEnergy(right.fEnergy), fTime(right.fTime), fCrystalId(right.fCrystalId)
-{
-}
+
+   = default;
 
 void AtApolloCrystalCalData::Print(const Option_t *opt) const
 {

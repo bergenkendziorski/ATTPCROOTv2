@@ -1,15 +1,14 @@
 #ifndef AtTPC20MGDECAY_H
 #define AtTPC20MGDECAY_H
 
-#include "FairGenerator.h"
-#include "FairIon.h"
-#include "FairParticle.h"
+#include <FairGenerator.h>
 
-#include <iostream>
-#include <map>
+#include <Rtypes.h>
 
 class FairPrimaryGenerator;
-class AtTPCIonGenerator;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtTPC20MgDecay : public FairGenerator {
 

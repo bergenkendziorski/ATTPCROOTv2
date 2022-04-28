@@ -3,31 +3,31 @@
 // -----            Created 30/01/15  by Y. Ayyad                      -----
 // -------------------------------------------------------------------------
 #include "AtTPCIonGenerator.h"
+
 #include "AtVertexPropagator.h"
 
-#include "FairPrimaryGenerator.h"
+#include <FairIon.h>
+#include <FairParticle.h>
+#include <FairPrimaryGenerator.h>
+#include <FairRunSim.h>
 
-#include "FairIon.h"
-#include "FairRunSim.h"
+#include <TDatabasePDG.h>
+#include <TMath.h>
+#include <TObjArray.h>
+#include <TObject.h> // for TObject
+#include <TParticle.h>
+#include <TParticlePDG.h>
+#include <TRandom.h>
+#include <TString.h>
 
-#include "TDatabasePDG.h"
-#include "TParticlePDG.h"
-#include "TObjArray.h"
-
-#include "TRandom.h"
-#include "TMath.h"
-#include "TLorentzVector.h"
-
-#include "FairRunSim.h"
-#include "FairIon.h"
+#include <cmath>
 #include <iostream>
-#include "TParticle.h"
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
-#define cBLUE "\033[1;34m"
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
+constexpr auto cBLUE = "\033[1;34m";
 
 using std::cout;
 using std::endl;
@@ -38,7 +38,7 @@ Int_t AtTPCIonGenerator::fgNIon = 0;
 
 // -----   Default constructor   ------------------------------------------
 AtTPCIonGenerator::AtTPCIonGenerator()
-   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fR(0.), fz(0.), fOffset(0.), fVx(0.), fVy(0.), fVz(0.), fIon(NULL), fQ(0),
+   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fR(0.), fz(0.), fOffset(0.), fVx(0.), fVy(0.), fVz(0.), fIon(nullptr), fQ(0),
      fBeamOpt(0), fWhmFocus(0.), fDiv(0.), fZFocus(0.), fRHole(0.)
 {
    //  cout << "-W- AtTPCIonGenerator: "
@@ -47,15 +47,16 @@ AtTPCIonGenerator::AtTPCIonGenerator()
 // ------------------------------------------------------------------------
 
 AtTPCIonGenerator::AtTPCIonGenerator(const Char_t *ionName, Int_t mult, Double_t px, Double_t py, Double_t pz)
-   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fR(0.), fz(0.), fOffset(0.), fVx(0.), fVy(0.), fVz(0.), fIon(NULL), fQ(0),
+   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fR(0.), fz(0.), fOffset(0.), fVx(0.), fVy(0.), fVz(0.), fIon(nullptr), fQ(0),
      fBeamOpt(0), fWhmFocus(0.), fDiv(0.), fZFocus(0.), fRHole(0.)
 {
 
    FairRunSim *fRun = FairRunSim::Instance();
    TObjArray *UserIons = fRun->GetUserDefIons();
    TObjArray *UserParticles = fRun->GetUserDefParticles();
-   FairParticle *part = 0;
-   fIon = (FairIon *)UserIons->FindObject(ionName);
+   FairParticle *part = nullptr;
+   fIon = dynamic_cast<FairIon *>(UserIons->FindObject(ionName)); // NOLINT
+
    if (fIon) {
       fgNIon++;
       fMult = mult;
@@ -68,7 +69,7 @@ AtTPCIonGenerator::AtTPCIonGenerator(const Char_t *ionName, Int_t mult, Double_t
       // }
 
    } else {
-      part = (FairParticle *)UserParticles->FindObject(ionName);
+      part = dynamic_cast<FairParticle *>(UserParticles->FindObject(ionName));
       if (part) {
          fgNIon++;
          TParticle *particle = part->GetParticle();
@@ -81,7 +82,7 @@ AtTPCIonGenerator::AtTPCIonGenerator(const Char_t *ionName, Int_t mult, Double_t
          // fVz   = vz;
       }
    }
-   if (fIon == 0 && part == 0) {
+   if (fIon == nullptr && part == nullptr) {
       cout << "-E- AtTPCIonGenerator: Ion or Particle is not defined !" << endl;
       Fatal("AtTPCIonGenerator", "No FairRun instantised!");
    }
@@ -91,31 +92,21 @@ AtTPCIonGenerator::AtTPCIonGenerator(const Char_t *ionName, Int_t mult, Double_t
 // -----   Default constructor   ------------------------------------------
 AtTPCIonGenerator::AtTPCIonGenerator(const char *name, Int_t z, Int_t a, Int_t q, Int_t mult, Double_t px, Double_t py,
                                      Double_t pz, Double_t Ex, Double_t m, Double_t ener, Double_t eLoss)
-   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fR(0.), fz(0.), fOffset(0.), fVx(0.), fVy(0.), fVz(0.), fIon(NULL), fQ(0),
-     fNomEner(0.), fBeamOpt(0), fWhmFocus(0.), fDiv(0.), fZFocus(0.), fRHole(0.)
+   : fMult(mult), fPx(Double_t(a) * px), fPy(Double_t(a) * py), fPz(Double_t(a) * pz), fR(0.), fz(0.), fOffset(0.),
+     fVx(0.), fVy(0.), fVz(0.), fIon(nullptr), fQ(0), fBeamOpt(0), fNomEner(ener), fMaxEnLoss(eLoss < 0 ? ener : eLoss),
+     fWhmFocus(0.), fDiv(0.), fZFocus(0.), fRHole(0.)
 {
    fgNIon++;
-   fMult = mult;
-   fPx = Double_t(a) * px;
-   fPy = Double_t(a) * py;
-   fPz = Double_t(a) * pz;
-   fNomEner = ener;
 
-   fMaxEnLoss = eLoss < 0 ? ener : eLoss;
-
-   // fVx   = vx;
-   // fVy   = vy;
-   // fVz   = vz;
-
-   double IonMass = m * 0.93149410242;
-   fIon = new FairIon(TString::Format("FairIon%d", fgNIon).Data(), z, a, q, Ex, m);
+   fIon = new FairIon(TString::Format("FairIon%d", fgNIon).Data(), z, a, q, Ex, m); // NOLINT
    cout << " Beam Ion mass : " << fIon->GetMass() << endl;
-   gAtVP->SetBeamMass(fIon->GetMass());
-   gAtVP->SetBeamNomE(ener);
+   AtVertexPropagator::Instance()->SetBeamMass(fIon->GetMass());
+   AtVertexPropagator::Instance()->SetBeamNomE(ener);
    FairRunSim *run = FairRunSim::Instance();
    if (!run) {
       cout << "-E- FairIonGenerator: No FairRun instantised!" << endl;
       Fatal("FairIonGenerator", "No FairRun instantised!");
+      return;
    }
    run->AddNewIon(fIon);
 }
@@ -128,13 +119,6 @@ AtTPCIonGenerator::AtTPCIonGenerator(const AtTPCIonGenerator &right)
      fRHole(right.fRHole)
 {
 }
-
-// -----   Destructor   ---------------------------------------------------
-AtTPCIonGenerator::~AtTPCIonGenerator()
-{
-   // if (fIon) delete fIon;
-}
-//_________________________________________________________________________
 
 // -----   Public method SetExcitationEnergy   ----------------------------
 void AtTPCIonGenerator::SetExcitationEnergy(Double_t eExc)
@@ -181,7 +165,7 @@ void AtTPCIonGenerator::SetEmittance()
    fPy = ptot * sin(theta);
    fPz = sqrt(ptot * ptot - fPx * fPx - fPy * fPy);
 
-   gAtVP->Setd2HeVtx(fVx, fVy, theta, phi);
+   AtVertexPropagator::Instance()->Setd2HeVtx(fVx, fVy, theta, phi);
 }
 //_________________________________________________________________________
 
@@ -203,15 +187,15 @@ Bool_t AtTPCIonGenerator::ReadEvent(FairPrimaryGenerator *primGen)
    int pdgType = thisPart->PdgCode();
 
    switch (fBeamOpt) {
-   case 1:
-      Double_t Phi, SpotR;
-      Phi = gRandom->Uniform(0, 360) * TMath::DegToRad();
-      SpotR = gRandom->Uniform(0, fR);
+   case 1: {
+      auto Phi = gRandom->Uniform(0, 360) * TMath::DegToRad();
+      auto SpotR = gRandom->Uniform(0, fR);
 
       fVx = SpotR * cos(Phi);           // gRandom->Uniform(-fx,fx);
       fVy = fOffset + SpotR * sin(Phi); // gRandom->Uniform(-fy,fy);
       fVz = fz;
       break;
+   }
    case 2:
       SetEmittance(); // parameters: fWhmFocus, fDiv, fZFocus, fRHole, fPx, fPy, fPz
       // changes: fVx, fVy, fVz, fPx, fPy, fPz, d2HeVtx
@@ -228,11 +212,11 @@ Bool_t AtTPCIonGenerator::ReadEvent(FairPrimaryGenerator *primGen)
           << ") Gev from vertex (" << fVx << ", " << fVy
           << ", " << fVz << ") cm" << endl;
    */
-   gAtVP->IncBeamEvtCnt();
+   AtVertexPropagator::Instance()->IncBeamEvtCnt();
 
-   if (gAtVP->GetBeamEvtCnt() % 2 != 0) {
+   if (AtVertexPropagator::Instance()->GetBeamEvtCnt() % 2 != 0) {
       Double_t Er = gRandom->Uniform(0., fMaxEnLoss);
-      gAtVP->SetRndELoss(Er);
+      AtVertexPropagator::Instance()->SetRndELoss(Er);
       // std::cout << cGREEN << " Random Energy AtTPCIonGenerator : " << Er << cNORMAL << std::endl;
    }
 

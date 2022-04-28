@@ -7,11 +7,10 @@
  ********************************************************************************/
 #include "AtTpcGeoPar.h"
 
-#include "FairParamList.h"
+#include <FairParGenericSet.h>
+#include <FairParamList.h>
 
-#include "TObjArray.h"
-
-#include <iostream>
+#include <TObjArray.h>
 
 ClassImp(AtTpcGeoPar)
 
@@ -20,9 +19,9 @@ ClassImp(AtTpcGeoPar)
 {
 }
 
-AtTpcGeoPar::~AtTpcGeoPar(void) {}
+AtTpcGeoPar::~AtTpcGeoPar() = default;
 
-void AtTpcGeoPar::clear(void)
+void AtTpcGeoPar::clear()
 {
    if (fGeoSensNodes) {
       delete fGeoSensNodes;

@@ -7,11 +7,14 @@
 #ifndef AtTPCGAMMADUMMYGENERAtOR_H
 #define AtTPCGAMMADUMMYGENERAtOR_H
 
-#include "FairGenerator.h"
+#include <FairGenerator.h>
 
-#include <iostream>
+#include <Rtypes.h>
 
 class FairPrimaryGenerator;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtTPCGammaDummyGenerator : public FairGenerator {
 
@@ -147,11 +150,11 @@ private:
    Bool_t fDebug;           // Debug switch
 
    // SPECIFIC FOR GAMMA DECAY
-   Double32_t fGammaEnergies[8];        // Gamma energies for the nuclear decay chain [GeV] TEST UNITS!
-   Double32_t fGammaBranchingRatios[8]; // Gamma branching ratios for the nuclear decay chain
-   Int_t fGammasDefinedInNuclearDecay;  // Number of gammas defined (max 8)
-   Double32_t fBetaOfEmittingFragment;  // Velocity of the fragment emitting the gammas
-   Double32_t fGammaFactor;             // Velocity of the fragment emitting the gammas
+   Double32_t fGammaEnergies[8]{};        // Gamma energies for the nuclear decay chain [GeV] TEST UNITS!
+   Double32_t fGammaBranchingRatios[8]{}; // Gamma branching ratios for the nuclear decay chain
+   Int_t fGammasDefinedInNuclearDecay;    // Number of gammas defined (max 8)
+   Double32_t fBetaOfEmittingFragment;    // Velocity of the fragment emitting the gammas
+   Double32_t fGammaFactor;               // Velocity of the fragment emitting the gammas
 
    Bool_t fLorentzBoostIsSet;      // True if Lorentz Boost is set
    Bool_t fNuclearDecayChainIsSet; // True if a nuclear decay chain is set

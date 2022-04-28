@@ -1,17 +1,20 @@
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <iomanip>
-
 #include "S800Calibration.h"
-#include "S800.h"
-#include "S800defs.h"
 
+#include <TEnv.h>
+#include <TError.h>
+#include <TMath.h>
+#include <TString.h>
+
+#include "S800.h"
+#include "S800Settings.h"
+#include "S800defs.h"
 #include "lmcurve.h"
-#include "lmmin.h"
 #include "lmfit.h"
+#include "lmmin.h"
+
+#include <cmath>
+#include <iostream>
+
 using namespace std;
 
 S800Calibration::S800Calibration()
@@ -29,10 +32,8 @@ S800Calibration::S800Calibration()
    }
 }
 
-S800Calibration::S800Calibration(S800Settings *setting)
+S800Calibration::S800Calibration(S800Settings *setting) : fSett(setting)
 {
-   fSett = setting;
-
    // S800
    fped.resize(2);
    fslope.resize(2);
@@ -343,7 +344,7 @@ Float_t S800Calibration::CalcX()
    fcrdc.SetYpad(qcal, j);
 
    Double_t xcog = (Double_t)sum_qx / sum_q;
-   Double_t sigma = (Double_t)TMath::Sqrt(sum_qxx / sum_q - (sum_qx / sum_q) * (sum_qx / sum_q));
+   auto sigma = (Double_t)TMath::Sqrt(sum_qxx / sum_q - (sum_qx / sum_q) * (sum_qx / sum_q));
    if (xcog < 0 || xcog > S800_FP_CRDC_CHANNELS) { // no gravity center found
       xcog = sqrt(-1.0);
       std::cout << "Something strange happens with the CRDC data." << std::endl;
@@ -507,7 +508,7 @@ Float_t S800Calibration::CalcX2(CRDC *theCRDC)
    // fcrdc.SetYpad(qcal,j);
 
    Double_t xcog = (Double_t)sum_qx / sum_q;
-   Double_t sigma = (Double_t)TMath::Sqrt(sum_qxx / sum_q - (sum_qx / sum_q) * (sum_qx / sum_q));
+   auto sigma = (Double_t)TMath::Sqrt(sum_qxx / sum_q - (sum_qx / sum_q) * (sum_qx / sum_q));
    if (xcog < 0 || xcog > S800_FP_CRDC_CHANNELS) { // no gravity center found
       xcog = sqrt(-1.0);
       std::cout << "Something strange happens with the CRDC data." << std::endl;
@@ -573,7 +574,7 @@ void S800Calibration::SetTof(GTimeOfFlight *tof)
 
 void S800Calibration::ReadICCalibration(const char *filename)
 {
-   TEnv *iccal = new TEnv(filename);
+   auto iccal = std::make_unique<TEnv>(filename);
    for (int i = 0; i < S800_FP_IC_CHANNELS; i++) {
       fICoffset[i] = iccal->GetValue(Form("IonChamber.Offset.%d", i), 0.0);
       fICslope[i] = iccal->GetValue(Form("IonChamber.Slope.%d", i), 1.0);
@@ -603,9 +604,9 @@ Float_t S800Calibration::ICSum(std::vector<Float_t> cal)
 {
    Short_t ch = 0;
    Float_t sum = 0;
-   for (UShort_t j = 0; j < cal.size(); j++) {
-      if (cal[j] > 0) {
-         sum += cal[j];
+   for (float j : cal) {
+      if (j > 0) {
+         sum += j;
          ch++;
       }
    }
@@ -722,9 +723,11 @@ void S800Calibration::S800Calculate(S800 *in, S800Calc *out)
    // IC
    ich.SetCal(ICCal(in->GetIonChamber()->GetChannels(), in->GetIonChamber()->GetData()));
    ich.SetSum(ICSum(ich.GetCal()));
-   if (ich.GetSum() > 400) {
-      icgood = true;
-   }
+   // Removed because icgood was never read/used
+   /*if (ich.GetSum() > 400) {
+        icgood = true;
+        }
+   */
    // ich.SetDE(ICDE(ich.GetSum(), crdc[0].GetX(), crdc[0].GetY()));
 
    // set Calculated S800

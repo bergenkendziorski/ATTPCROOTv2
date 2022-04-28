@@ -1,24 +1,54 @@
 #ifndef AtPRATASK_H
 #define AtPRATASK_H
 
-#include <vector>
+#include <FairTask.h> // for FairTask, InitStatus
 
-// ROOT
-#include "TClonesArray.h"
+#include <Rtypes.h>       // for Int_t, Double_t, Bool_t, THashConsistencyH...
+#include <TClonesArray.h> // for TClonesArray
 
-// AtTPCROOT classes
-#include "AtEvent.h"
-#include "AtPatternEvent.h"
-#include "AtDigiPar.h"
-#include "AtHit.h"
-#include "AtPRA.h"
-#include "AtTrackFinderHC.h"
-
-// FAIRROOT classes
-#include "FairTask.h"
-#include "FairLogger.h"
+#include <stddef.h> // for size_t
+class AtDigiPar;
+class FairLogger;
+class TBuffer;
+class TClass;
+class TMemberInspector;
+namespace AtPATTERN {
+class AtPRA;
+}
 
 class AtPRAtask : public FairTask {
+private:
+   TClonesArray *fEventHArray{};
+   TClonesArray fPatternEventArray;
+
+   FairLogger *fLogger;
+   AtDigiPar *fPar;
+
+   AtPATTERN::AtPRA *fPRA{};
+
+   Int_t fPRAlgorithm;
+
+   Int_t fMinNumHits;
+   Int_t fMaxNumHits;
+
+   Bool_t kIsPersistence;
+
+   // HC parameters
+   float fHCs;
+   size_t fHCk;
+   size_t fHCn;
+   size_t fHCm;
+   float fHCr;
+   float fHCa;
+   float fHCt;
+   size_t fHCpadding;
+
+   // Prunning parameters
+   Bool_t kSetPrunning;
+   Int_t fKNN;             //<! Number of nearest neighbors kNN
+   Double_t fStdDevMulkNN; //<! Std dev multiplier for kNN
+   Double_t fkNNDist;      //<! Distance threshold for outlier rejection in kNN
+
 public:
    AtPRAtask();
    ~AtPRAtask();
@@ -47,38 +77,6 @@ public:
    void SetkNN(Double_t knn) { fKNN = knn; }
    void SetStdDevMulkNN(Double_t stdDevMul) { fStdDevMulkNN = stdDevMul; }
    void SetkNNDist(Double_t dist) { fkNNDist = dist; }
-
-private:
-   TClonesArray *fEventHArray;
-   TClonesArray *fPatternEventArray;
-
-   FairLogger *fLogger;
-   AtDigiPar *fPar;
-
-   AtPATTERN::AtPRA *fPRA;
-
-   Int_t fPRAlgorithm;
-
-   Int_t fMinNumHits;
-   Int_t fMaxNumHits;
-
-   Bool_t kIsPersistence;
-
-   // HC parameters
-   float fHCs;
-   size_t fHCk;
-   size_t fHCn;
-   size_t fHCm;
-   float fHCr;
-   float fHCa;
-   float fHCt;
-   size_t fHCpadding;
-
-   // Prunning parameters
-   Bool_t kSetPrunning;
-   Int_t fKNN;             //<! Number of nearest neighbors kNN
-   Double_t fStdDevMulkNN; //<! Std dev multiplier for kNN
-   Double_t fkNNDist;      //<! Distance threshold for outlier rejection in kNN
 
    ClassDef(AtPRAtask, 1);
 };

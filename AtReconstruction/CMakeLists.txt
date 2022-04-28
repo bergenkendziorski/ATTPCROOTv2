@@ -1,15 +1,11 @@
-# Create a library called "libAtReco" which includes the source files given in the array .
+# Create a library called "libAtReco" which includes the source files given in the array .o
 
 Set(LIBRARY_NAME AtReconstruction)
 Set(LINKDEF ${LIBRARY_NAME}LinkDef.h)
 
 
 set(INCLUDE_DIRECTORIES
-${BASE_INCLUDE_DIRECTORIES}
-${GENFIT2_INCLUDE_DIR}
-
 # Add all the folders having header files you used in the code.
-${CMAKE_SOURCE_DIR}/AtReconstruction/AtDecoder
 ${CMAKE_SOURCE_DIR}/AtReconstruction/AtPulseAnalyzer
 ${CMAKE_SOURCE_DIR}/AtReconstruction/AtRansac
 ${CMAKE_SOURCE_DIR}/AtReconstruction/AtPatternRecognition
@@ -17,53 +13,25 @@ ${CMAKE_SOURCE_DIR}/AtReconstruction/AtFitter
 ${CMAKE_SOURCE_DIR}/AtReconstruction/AtFilter
 )
 
-set(LINK_DIRECTORIES
-${FAIRROOT_LIBRARY_DIR}
-${GENFIT2_LIBRARY_DIR}
-)
-
 Set(DEPENDENCIES
-  Base
-  FairTools
-  XMLParser
+  FairRoot::Base
+  FairRoot::FairTools
 
-  AtAnalysis
-  AtTpcMap
-  AtParameter
-  AtData
+  ATTPCROOT::AtAnalysis
+  ATTPCROOT::AtMap
+  ATTPCROOT::AtParameter
+  ATTPCROOT::AtSimulationData
+  ATTPCROOT::AtData
+  ATTPCROOT::AtTools
   
   ROOT::Spectrum
   ROOT::Core
-  
-  hdf5::hdf5-shared
-  ${Boost_LOG_LIBRARY}
-  ${Boost_LOG_SETUP_LIBRARY}
-  ${Boost_THREAD_LIBRARY}
-  ${Boost_DAtE_TIME_LIBRARY}
-  ${Boost_FILESYSTEM_LIBRARY}
-  ${Boost_SYSTEM_LIBRARY}
-  )
 
-set(LINK_DIRECTORIES
-  ${FAIRROOT_LIBRARY_DIR}
-  ${GENFIT2_LIBRARY_DIR}
+  Boost::headers #multi_array
   )
 
 set(SRCS
   # Add all the source files below this line. Those must have cxx for their extension.
-
-  AtDecoder/AtPad.cxx
-  AtDecoder/AtRawEvent.cxx
-  AtDecoder/AtHit.cxx
-  AtDecoder/AtHitCluster.cxx
-  AtDecoder/AtEvent.cxx
-  AtDecoder/AtProtoEvent.cxx
-  AtDecoder/AtProtoEventAna.cxx
-  AtDecoder/AtTrackingEventAna.cxx
-  AtDecoder/AtPatternEvent.cxx
-  AtDecoder/AtProtoQuadrant.cxx
-  AtDecoder/AtTrack.cxx
-  AtDecoder/AtHDFParser.cxx
 
   AtPulseAnalyzer/AtPSA.cxx
   AtPulseAnalyzer/AtPSASimple.cxx
@@ -72,29 +40,28 @@ set(SRCS
   AtPulseAnalyzer/AtPSAProtoFull.cxx
   AtPulseAnalyzer/AtPSAFull.cxx
   AtPulseAnalyzer/AtCalibration.cxx
-
+  
   AtFilter/AtFilter.cxx
   AtFilter/AtFilterSubtraction.cxx
   AtFilter/AtFilterDivide.cxx
   AtFilter/AtTrapezoidFilter.cxx
   AtFilter/AtFilterCalibrate.cxx
-
-  AtHDFParserTask.cxx
+  AtFilter/AtFilterFFT.cxx
+  
   AtPSAtask.cxx
   AtFilterTask.cxx
   AtAuxFilterTask.cxx
   AtDataReductionTask.cxx
-  
+  AtSpaceChargeCorrectionTask.cxx
   )
 
 ### Add additional sources and libraries if we found certain modules ###
 
 # Adding libraries that depend on PCL
 if(PCL_FOUND)
-  MESSAGE("${Green} libAtTPCReco - Building PCL classes: RANSAC, Pattern Recognition, Hough Transformation, Minimization, Analysis, PSA/PSAFilter ${ColourReset} ")
   set(SRCS ${SRCS} 
     AtRansac/AtRansac.cxx
-    AtPulseAnalyzer/AtPSAFilter.cxx
+    #AtPulseAnalyzer/AtPSAFilter.cxx #This source file breaks clang-tidy. idk why
     AtPatternRecognition/AtTrackFinderHC.cxx
     AtPatternRecognition/smoothenCloud.cxx
     AtPatternRecognition/msd.cxx
@@ -112,6 +79,7 @@ if(PCL_FOUND)
   set(DEPENDENCIES ${DEPENDENCIES}
     ${PCL_LIBRARIES}
     )
+  
   # Add include directory and link directory if no targets
   if(NOT TARGET pcl_common)
     message("No set targets for PCL!")
@@ -126,7 +94,6 @@ if(PCL_FOUND)
 endif()
 
 if(GENFIT2_FOUND)
-  MESSAGE("${Green} libAtTPCReco - Building GENFIT classes: AtFitter/Genfit ${ColourReset} ")
   set(SRCS ${SRCS}
     AtFitter/AtFitter.cxx
     AtFitter/AtGenfit.cxx
@@ -134,12 +101,11 @@ if(GENFIT2_FOUND)
     AtFitterTask.cxx
     )
   set(DEPENDENCIES ${DEPENDENCIES}
-    ${GENFIT2_LIBRARY_DIR}/libgenfit2.so
+    GENFIT2::genfit2
     )
 endif()
 
 if(HiRAEVT_FOUND)
-  MESSAGE("${Green} libAtTPCReco - Building HiRAEVT classes ${ColourReset} ")
   set(SRCS ${SRCS}
     AtLinkDAQTask.cxx
     )
@@ -148,7 +114,7 @@ if(HiRAEVT_FOUND)
     )
 endif()
 
-generate_target_root_library(${LIBRARY_NAME}
+generate_target_and_root_library(${LIBRARY_NAME}
   LINKDEF ${LINKDEF}
   SRCS ${SRCS}
   INCLUDE_DIR ${INCLUDE_DIRECTORIES}

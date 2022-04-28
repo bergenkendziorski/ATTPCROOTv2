@@ -6,42 +6,37 @@
 #ifndef AtTPCXSMANAGER_H
 #define AtTPCXSMANAGER_H
 
-#include "FairGenerator.h"
-#include "FairIon.h"
-#include "FairParticle.h"
-#include "TH1F.h"
-#include "TH2F.h"
+#include <Rtypes.h>
+#include <TObject.h>
 
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <iostream>
 #include <memory>
-#include <thread>
-#include <chrono>
-#include <mutex>
-#include <map>
+#include <string>
 
-class AtTPCXSManager;
+class TBuffer;
+class TClass;
+class TH2F;
+class TMemberInspector;
 
 class AtTPCXSManager : public TObject {
+private:
+   static std::unique_ptr<AtTPCXSManager> fInstance;
+
+   std::string fExFunctionFile;
+   std::shared_ptr<TH2F> fExFunction;
+   Bool_t kIsExFunction = true;
+
+protected:
+   AtTPCXSManager() = default;
 
 public:
-   AtTPCXSManager();
-   ~AtTPCXSManager();
+   ~AtTPCXSManager() = default;
 
+   static AtTPCXSManager *Instance();
    bool SetExcitationFunction(std::string filename);
 
    inline std::shared_ptr<TH2F> GetExcitationFunction() { return fExFunction; }
 
-private:
-   std::string fExFunctionFile;
-   std::shared_ptr<TH2F> fExFunction;
-   Bool_t kIsExFunction;
-
    ClassDef(AtTPCXSManager, 1)
 };
-
-extern AtTPCXSManager *gAtXS; // global
 
 #endif

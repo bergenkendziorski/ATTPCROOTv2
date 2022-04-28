@@ -1,43 +1,38 @@
 #include "AtPulseLineTask.h"
 
-#include "AtDigiPar.h"
-#include "AtHit.h"
-#include "AtMap.h"
-#include "AtPad.h"
-#include "AtRawEvent.h"
-#include "AtSimulatedLine.h"
 #include "AtMCPoint.h"
-#include "AtVertexPropagator.h"
+#include "AtMap.h"
+#include "AtSimulatedLine.h"
+#include "AtSimulatedPoint.h"
 
-// Fair class header
-#include "FairRootManager.h"
-#include "FairRunAna.h"
-#include "FairRuntimeDb.h"
+#include <FairLogger.h>
 
-// STL class headers
-#include <cmath>
-#include <iostream>
-#include <iomanip>
+#include <Math/Vector3D.h>
+#include <Math/Vector3Dfwd.h>
+#include <TAxis.h>
+#include <TClonesArray.h>
+#include <TH1.h>
+#include <TH2Poly.h>
+#include <TMath.h>
+#include <TObject.h>
+#include <TRandom.h>
 
-#include "Math/Vector3D.h"
-#include "TClonesArray.h"
-#include "TF1.h"
-#include "TH1.h"
-#include "TH2Poly.h"
-#include "TMath.h"
-#include "TRandom.h"
+#include <algorithm>
+#include <memory>
+#include <numeric>
+#include <utility>
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
 
 AtPulseLineTask::AtPulseLineTask() : AtPulseTask("AtPulseLineTask")
 {
    LOG(debug) << "Constructor of AtPulseLineTask";
 }
 
-AtPulseLineTask::~AtPulseLineTask() {}
+AtPulseLineTask::~AtPulseLineTask() = default;
 
 Int_t AtPulseLineTask::throwRandomAndGetBinAfterDiffusion(const ROOT::Math::XYZVector &loc, Double_t diffusionSigma)
 {
@@ -48,16 +43,16 @@ Int_t AtPulseLineTask::throwRandomAndGetBinAfterDiffusion(const ROOT::Math::XYZV
    return fPadPlane->FindBin(propX, propY);
 }
 
-void AtPulseLineTask::generateIntegrationMap(AtSimulatedLine *line)
+void AtPulseLineTask::generateIntegrationMap(AtSimulatedLine &line)
 {
    // MC the integration over the pad plane
    fXYintegrationMap.clear();
-   auto loc = line->GetPosition();
+   auto loc = line.GetPosition();
    Int_t validPoints = 0;
 
-   LOG(debug) << "Sampling with transverse diffusion of: " << line->GetTransverseDiffusion();
+   LOG(debug2) << "Sampling with transverse diffusion of: " << line.GetTransverseDiffusion();
    for (int i = 0; i < fNumIntegrationPoints; ++i) {
-      auto binNumber = throwRandomAndGetBinAfterDiffusion(loc, line->GetTransverseDiffusion());
+      auto binNumber = throwRandomAndGetBinAfterDiffusion(loc, line.GetTransverseDiffusion());
 
       if (binNumber < 0)
          continue;
@@ -74,10 +69,12 @@ void AtPulseLineTask::generateIntegrationMap(AtSimulatedLine *line)
 bool AtPulseLineTask::gatherElectronsFromSimulatedPoint(AtSimulatedPoint *point)
 {
    auto line = dynamic_cast<AtSimulatedLine *>(point);
-   if (line == nullptr)
+   if (line == nullptr) {
       LOG(fatal) << "Data in branch AtSimulatedPoint is not of type AtSimulatedLine!";
+      return false;
+   }
 
-   generateIntegrationMap(line);
+   generateIntegrationMap(*line);
    std::vector<double> zIntegration; // zero is binMin
    auto binMin = integrateTimebuckets(zIntegration, line);
 
@@ -90,11 +87,11 @@ bool AtPulseLineTask::gatherElectronsFromSimulatedPoint(AtSimulatedPoint *point)
          auto zLoc = eleAccumulated[0]->GetXaxis()->GetBinCenter(i + binMin);
          auto charge = line->GetCharge() * zIntegration[i] * pad.second;
          eleAccumulated[pad.first]->Fill(zLoc, charge);
-         electronsMap[pad.first] = eleAccumulated[pad.first];
+         electronsMap[pad.first] = eleAccumulated[pad.first].get();
       }
 
       if (fIsSaveMCInfo) {
-         auto mcPoint = (AtMCPoint *)fMCPointArray->At(line->GetMCPointID());
+         auto mcPoint = dynamic_cast<AtMCPoint *>(fMCPointArray->At(line->GetMCPointID()));
          auto trackID = mcPoint->GetTrackID();
          saveMCInfo(line->GetMCPointID(), pad.first, trackID);
       }
@@ -132,9 +129,8 @@ Int_t AtPulseLineTask::integrateTimebuckets(std::vector<double> &zIntegral, AtSi
 
    // Integrate G(tMean, sigmaLongDiff) over each time bucket from binMin to binMax
    // and fill zIntegral with the result.
-   double lowerBound;
    auto denominator = line->GetLongitudinalDiffusion() * TMath::Sqrt(2);
-   lowerBound = TMath::Erf((axis->GetBinLowEdge(binMin) - tMean) / denominator);
+   double lowerBound = TMath::Erf((axis->GetBinLowEdge(binMin) - tMean) / denominator);
    for (int i = binMin; i <= binMax; ++i) {
       auto upperBound = TMath::Erf((axis->GetBinUpEdge(i) - tMean) / denominator);
       auto integral = 0.5 * (upperBound - lowerBound);

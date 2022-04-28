@@ -3,42 +3,68 @@
 
 #include "AtFitter.h"
 
-#include "AtHit.h"
-#include "AtHitCluster.h"
-#include "AtSpacePointMeasurement.h"
+#include <Rtypes.h>
+#include <Track.h>
 
-// GENFIT2 classes
-#include "AbsKalmanFitter.h"
-#include "KalmanFitterRefTrack.h"
-#include "KalmanFitter.h"
-#include "DAF.h"
-#include "ConstField.h"
-#include "FieldManager.h"
-#include "MaterialEffects.h"
-#include "TGeoMaterialInterface.h"
-#include "MeasurementFactory.h"
-#include "MeasurementProducer.h"
-#include "EventDisplay.h"
-#include "TrackPoint.h"
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-//#include "GFRaveVertexFactory.h"
+class AtHitCluster;
+class AtTrack;
+class TBuffer;
+class TClass;
+class TClonesArray;
+class TMemberInspector;
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+namespace genfit {
+class AbsKalmanFitter;
+class AbsMeasurement;
+class AtSpacepointMeasurement;
+template <class hit_T, class measurement_T>
+class MeasurementProducer;
+template <class measurement_T>
+class MeasurementFactory;
+} // namespace genfit
 
 namespace AtFITTER {
 
 class AtGenfit : public AtFitter {
+private:
+   std::shared_ptr<genfit::AbsKalmanFitter> fKalmanFitter;
+   TClonesArray *fGenfitTrackArray;
+   TClonesArray *fHitClusterArray;
+   Int_t fPDGCode{2212}; //<! Particle PGD code
+   Int_t fTPCDetID{0};
+   Int_t fCurrentDirection{-1};
+   Float_t fMaxBrho;              //<! Max Brho allowed in Tm
+   Float_t fMinBrho;              //<! Min Brho allowed in Tm
+   Int_t fMaxIterations;          //<! Max iterations for fitter
+   Int_t fMinIterations;          //<! Min iterations for fitter
+   Float_t fMagneticField;        //<! Constant magnetic field along Z in T
+   Float_t fMass{1.00727647};     //<! Particle mass in atomic mass unit
+   Int_t fAtomicNumber{1};        //<! Particle Atomic number Z
+   Float_t fNumFitPoints{0.90};   //<! % of processed track points for fit
+   Int_t fVerbosity{0};           //<! Fit verbosity
+   std::string fEnergyLossFile;   //<! Energy loss file
+   Bool_t fSimulationConv{false}; //<! Switch to simulation convention
+   Float_t fGasMediumDensity{};   //<! Medium density in mg/cm3
+   Double_t fPhiOrientation{0};   //<! Phi angle orientation for fit
+   std::string fIonName;          //<! Name of ion to fit
+
+   genfit::MeasurementProducer<AtHitCluster, genfit::AtSpacepointMeasurement> *fMeasurementProducer;
+   genfit::MeasurementFactory<genfit::AbsMeasurement> *fMeasurementFactory;
+
+   std::vector<Int_t> *fPDGCandidateArray{};
 
 public:
    AtGenfit(Float_t magfield, Float_t minbrho, Float_t maxbrho, std::string eLossFile, Float_t gasMediumDensity,
             Int_t minit = 5, Int_t maxit = 20);
    ~AtGenfit();
 
-   genfit::Track *FitTracks(AtTrack *track);
-   void Init();
+   genfit::Track *FitTracks(AtTrack *track) override;
+   void Init() override;
 
    inline void SetMinIterations(Int_t minit) { fMinIterations = minit; }
    inline void SetMaxIterations(Int_t maxit) { fMaxIterations = maxit; }
@@ -53,34 +79,12 @@ public:
    inline void SetEnergyLossFile(std::string file) { fEnergyLossFile = file; }
    inline void SetSimulationConvention(Bool_t simconv) { fSimulationConv = simconv; }
    inline void SetGasMediumDensity(Float_t mediumDensity) { fGasMediumDensity = mediumDensity; }
+   inline void RotatePhi(Double_t phi) { fPhiOrientation = phi; }
+   inline void SetIonName(std::string ionName) { fIonName = std::move(ionName); }
 
    TClonesArray *GetGenfitTrackArray();
-
-private:
-   std::shared_ptr<genfit::AbsKalmanFitter> fKalmanFitter;
-   TClonesArray *fGenfitTrackArray;
-   TClonesArray *fHitClusterArray;
-   Int_t fPDGCode; //<! Particle PGD code
-   Int_t fTPCDetID;
-   Int_t fCurrentDirection;
-   Float_t fMaxBrho;            //<! Max Brho allowed in Tm
-   Float_t fMinBrho;            //<! Min Brho allowed in Tm
-   Int_t fMaxIterations;        //<! Max iterations for fitter
-   Int_t fMinIterations;        //<! Min iterations for fitter
-   Float_t fMagneticField;      //<! Constant magnetic field along Z in T
-   Float_t fMass;               //<! Particle mass in atomic mass unit
-   Int_t fAtomicNumber;         //<! Particle Atomic number Z
-   Float_t fNumFitPoints;       //<! % of processed track points for fit
-   Int_t fVerbosity;            //<! Fit verbosity
-   std::string fEnergyLossFile; //<! Energy loss file
-   Bool_t fSimulationConv;      //<! Switch to simulation convention
-   Float_t fGasMediumDensity;   //<! Medium density in mg/cm3
-
-   genfit::MeasurementProducer<AtHitCluster, genfit::AtSpacepointMeasurement> *fMeasurementProducer;
-   genfit::MeasurementFactory<genfit::AbsMeasurement> *fMeasurementFactory;
-
-   std::vector<Int_t> *fPDGCandidateArray;
-
+   Int_t GetPDGCode() { return fPDGCode; }
+   std::string &GetIonName() { return fIonName; }
    ClassDefOverride(AtGenfit, 1);
 };
 

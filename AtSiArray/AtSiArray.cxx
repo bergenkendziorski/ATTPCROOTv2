@@ -1,48 +1,36 @@
 #include "AtSiArray.h"
 
-#include "AtSiArrayGeo.h"
-#include "AtSiArrayGeoPar.h"
-
-#include "AtMCPoint.h"
-#include "AtVertexPropagator.h"
 #include "AtDetectorList.h"
+#include "AtSiPoint.h"
 #include "AtStack.h"
 
-#include "FairVolume.h"
-#include "FairGeoVolume.h"
-#include "FairGeoNode.h"
-#include "FairRootManager.h"
-#include "FairGeoLoader.h"
-#include "FairGeoInterface.h"
-#include "FairRun.h"
-#include "FairRuntimeDb.h"
+#include <FairDetector.h>
+#include <FairLogger.h>
+#include <FairRootManager.h>
+#include <FairVolume.h>
 
-#include "TClonesArray.h"
-#include "TVirtualMC.h"
-#include "TGeoManager.h"
-#include "TGeoBBox.h"
-#include "TGeoCompositeShape.h"
-#include "TGeoTube.h"
-#include "TGeoMaterial.h"
-#include "TGeoMedium.h"
-#include "TParticle.h"
-#include "TRandom.h"
-#include "TRandom3.h"
+#include <TClonesArray.h>
+#include <TGeoManager.h>
+#include <TLorentzVector.h>
+#include <TVector3.h>
+#include <TVirtualMC.h>
+#include <TVirtualMCStack.h>
 
 #include <iostream>
+
 using std::cout;
 using std::endl;
 
 AtSiArray::AtSiArray()
    : FairDetector("AtSiArray", kTRUE, kAtSiArray), fTrackID(-1), fVolumeID(-1), fPos(), fMom(), fTime(-1.),
-     fLength(-1.), fELoss(-1), fPosIndex(-1), fAtSiArrayPointCollection(new TClonesArray("AtMCPoint")), fELossAcc(-1)
+     fLength(-1.), fELoss(-1), fPosIndex(-1), fAtSiArrayPointCollection(new TClonesArray("AtSiPoint")), fELossAcc(-1)
 {
    // LOG(INFO)<<" AtSiArray detector initialized ";
 }
 
 AtSiArray::AtSiArray(const char *name, Bool_t active)
    : FairDetector(name, active, kAtSiArray), fTrackID(-1), fVolumeID(-1), fPos(), fMom(), fTime(-1.), fLength(-1.),
-     fELoss(-1), fPosIndex(-1), fAtSiArrayPointCollection(new TClonesArray("AtMCPoint")), fELossAcc(-1)
+     fELoss(-1), fPosIndex(-1), fAtSiArrayPointCollection(new TClonesArray("AtSiPoint")), fELossAcc(-1)
 {
    // LOG(INFO)<<" AtSiArray detector initialized ";
 }
@@ -58,19 +46,19 @@ AtSiArray::~AtSiArray()
 void AtSiArray::Initialize()
 {
    FairDetector::Initialize();
-   FairRuntimeDb *rtdb = FairRun::Instance()->GetRuntimeDb();
-   AtSiArrayGeoPar *par = (AtSiArrayGeoPar *)(rtdb->getContainer("AtSiArrayGeoPar"));
+   // FairRuntimeDb *rtdb = FairRun::Instance()->GetRuntimeDb();
+   // auto *par = (AtSiArrayGeoPar *)(rtdb->getContainer("AtSiArrayGeoPar"));
 }
 
 Bool_t AtSiArray::ProcessHits(FairVolume *vol)
 {
    /** This method is called from the MC stepping */
 
-   AtStack *stack = static_cast<AtStack *>(TVirtualMC::GetMC()->GetStack());
+   auto *stack = dynamic_cast<AtStack *>(TVirtualMC::GetMC()->GetStack());
    std::pair<Int_t, Int_t> AZ;
    AZ = DecodePdG(gMC->TrackPid());
    fVolName = gMC->CurrentVolName();
-   Int_t VolumeID;
+   Int_t VolumeID = 0;
 
    LOG(debug) << "In AtSiArray::ProcessHits";
    // Set parameters at entrance of volume. Reset ELoss.
@@ -95,10 +83,10 @@ Bool_t AtSiArray::ProcessHits(FairVolume *vol)
       LOG(INFO) << " Position Out : " << fPosOut.X() << " " << fPosOut.Y() << "  " << fPosOut.Z() << std::endl;
       LOG(INFO) << " Momentum In: " << fMomIn.X() << " " << fMomIn.Y() << "  " << fMomIn.Z() << std::endl;
       // LOG(INFO)<<" Total relativistic energy " <<gMC->Etot()<< FairLogger::endl;
-      // LOG(INFO)<<" Mass of the Tracked particle (gAVTP) : "<<gAtVP->GetBeamMass()<<std::endl;
-      // LOG(INFO)<<" Mass of the Tracked particle (gMC) : "<<gMC->TrackMass()<<std::endl;
-      // LOG(INFO)<<" Initial energy of the current particle in this volume : "<<((gMC->Etot() - gMC->TrackMass()) *
-      // 1000.)<<FairLogger::endl;// Relativistic Mass
+      // LOG(INFO)<<" Mass of the Tracked particle (gAVTP) :
+      // "<<AtVertexPropagator::Instance()->GetBeamMass()<<std::endl; LOG(INFO)<<" Mass of the Tracked particle (gMC) :
+      // "<<gMC->TrackMass()<<std::endl; LOG(INFO)<<" Initial energy of the current particle in this volume :
+      // "<<((gMC->Etot() - gMC->TrackMass()) * 1000.)<<FairLogger::endl;// Relativistic Mass
    }
 
    // Sum energy loss for all steps in the active volume
@@ -125,11 +113,11 @@ Bool_t AtSiArray::ProcessHits(FairVolume *vol)
 
       if (gMC->IsTrackExiting()) {
 
-         const Double_t *oldpos;
-         const Double_t *olddirection;
+         const Double_t *oldpos = nullptr;
+         const Double_t *olddirection = nullptr;
          Double_t newpos[3];
          Double_t newdirection[3];
-         Double_t safety;
+         Double_t safety = 0;
 
          gGeoManager->FindNode(fPosOut.X(), fPosOut.Y(), fPosOut.Z());
          oldpos = gGeoManager->GetCurrentPoint();
@@ -223,7 +211,7 @@ TClonesArray *AtSiArray::GetCollection(Int_t iColl) const
    if (iColl == 0) {
       return fAtSiArrayPointCollection;
    } else {
-      return NULL;
+      return nullptr;
    }
 }
 
@@ -263,16 +251,16 @@ Bool_t AtSiArray::CheckIfSensitive(std::string name)
    return kFALSE;
 }
 
-AtMCPoint *AtSiArray::AddHit(Int_t trackID, Int_t detID, TVector3 pos, TVector3 mom, Double_t time, Double_t length,
+AtSiPoint *AtSiArray::AddHit(Int_t trackID, Int_t detID, TVector3 pos, TVector3 mom, Double_t time, Double_t length,
                              Double_t eLoss)
 {
    TClonesArray &clref = *fAtSiArrayPointCollection;
    Int_t size = clref.GetEntriesFast();
-   return new (clref[size]) AtMCPoint(trackID, detID, pos, mom, time, length, eLoss);
+   return new (clref[size]) AtSiPoint(trackID, detID, pos, mom, time, length, eLoss);
 }
 
 // -----   Private method AddHit   --------------------------------------------
-AtMCPoint *AtSiArray::AddHit(Int_t trackID, Int_t detID, TString VolName, Int_t detCopyID, TVector3 posIn,
+AtSiPoint *AtSiArray::AddHit(Int_t trackID, Int_t detID, TString VolName, Int_t detCopyID, TVector3 posIn,
                              TVector3 posOut, TVector3 momIn, TVector3 momOut, Double_t time, Double_t length,
                              Double_t eLoss, Double_t EIni, Double_t AIni, Int_t A, Int_t Z)
 {
@@ -285,8 +273,8 @@ AtMCPoint *AtSiArray::AddHit(Int_t trackID, Int_t detID, TString VolName, Int_t 
       LOG(INFO) << "Si Array: Adding Point at (" << posIn.X() << ", " << posIn.Y() << ", " << posIn.Z()
                 << ") cm,  detector " << detID << ", track " << trackID << ", energy loss " << eLoss * 1e06 << " keV";
 
-   return new (clref[size]) AtMCPoint(trackID, detID, VolName, detCopyID, posIn, posOut, momIn, momOut, time, length,
-                                      eLoss, EIni, AIni, A, Z);
+   return new (clref[size]) AtSiPoint(trackID, detID, posIn, posOut, momIn, momOut, time, length, eLoss, VolName,
+                                      detCopyID, EIni, AIni, A, Z);
 }
 
 std::pair<Int_t, Int_t> AtSiArray::DecodePdG(Int_t PdG_Code)
@@ -310,4 +298,4 @@ std::pair<Int_t, Int_t> AtSiArray::DecodePdG(Int_t PdG_Code)
    return nucleus;
 }
 
-ClassImp(AtSiArray)
+ClassImp(AtSiArray);

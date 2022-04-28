@@ -10,7 +10,11 @@
  *
  */
 
-#include "FairTask.h"
+#include <FairTask.h>
+
+#include <Rtypes.h>
+#include <TString.h>
+
 #include <type_traits>
 
 class AtRawEvent;
@@ -23,9 +27,9 @@ class AtDataReductionTask : public FairTask {
 private:
    funcType reduceFunc;
 
-   TClonesArray *fInputEventArray; // AtRawEvent
-   TString fInputBranchName;       // Name if AtRawEvent branch
-   AtRawEvent *fRawEvent;
+   TClonesArray *fInputEventArray{}; // AtRawEvent
+   TString fInputBranchName;         // Name if AtRawEvent branch
+   AtRawEvent *fRawEvent{};
 
 public:
    AtDataReductionTask();

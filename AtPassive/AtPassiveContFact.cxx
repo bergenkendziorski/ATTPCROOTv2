@@ -23,12 +23,14 @@
 /////////////////////////////////////////////////////////////
 #include "AtPassiveContFact.h"
 
-#include "FairRuntimeDb.h" // for FairRuntimeDb
+#include <FairContFact.h>
+#include <FairRuntimeDb.h> // for FairRuntimeDb
 
-#include "TList.h"   // for TList
-#include "TString.h" // for TString
+#include <Rtypes.h>
+#include <TList.h>   // for TList
+#include <TString.h> // for TString
 
-#include <string.h> // for strcmp, NULL
+#include <iosfwd>
 
 class FairParSet;
 
@@ -52,7 +54,7 @@ void AtPassiveContFact::setAllContainers()
    /** Creates the Container objects with all accepted contexts and adds them to
     *  the list of containers for the STS library.*/
 
-   FairContainer *p = new FairContainer("FairGeoPassivePar", "Passive Geometry Parameters", "TestDefaultContext");
+   auto *p = new FairContainer("FairGeoPassivePar", "Passive Geometry Parameters", "TestDefaultContext");
    p->addContext("TestNonDefaultContext");
 
    containers->Add(p);

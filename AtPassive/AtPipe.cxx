@@ -12,16 +12,16 @@
 // -------------------------------------------------------------------------
 
 #include "AtPipe.h"
-#include "TList.h"
-#include "TObjArray.h"
 
-#include "TGeoPcon.h"
-#include "TGeoTube.h"
-#include "TGeoMaterial.h"
-#include "TGeoMedium.h"
-#include "TGeoManager.h"
+#include <FairModule.h>
 
-AtPipe::~AtPipe() {}
+#include <TGeoManager.h>
+#include <TGeoMaterial.h>
+#include <TGeoMedium.h>
+#include <TGeoPcon.h>
+#include <TGeoVolume.h>
+
+AtPipe::~AtPipe() = default;
 AtPipe::AtPipe() : FairModule() {}
 
 AtPipe::AtPipe(const char *name, const char *title) : FairModule(name, title) {}
@@ -32,33 +32,33 @@ void AtPipe::ConstructGeometry()
    TGeoVolume *top = gGeoManager->GetTopVolume();
 
    // define some materials
-   TGeoMaterial *matCarbon = new TGeoMaterial("C", 12.011, 6.0, 2.265);
-   TGeoMaterial *matVacuum = new TGeoMaterial("Vacuum", 0, 0, 0);
+   auto *matCarbon = new TGeoMaterial("C", 12.011, 6.0, 2.265);
+   auto *matVacuum = new TGeoMaterial("Vacuum", 0, 0, 0);
 
    // define some media
-   TGeoMedium *Carbon = new TGeoMedium("C", 50, matCarbon);
-   TGeoMedium *Vacuum = new TGeoMedium("Vacuum", 60, matVacuum);
+   auto *Carbon = new TGeoMedium("C", 50, matCarbon);
+   auto *Vacuum = new TGeoMedium("Vacuum", 60, matVacuum);
 
    Int_t nSects = 2;
    Double_t z[] = {-50, 0};   // in cm
    Double_t r[] = {2.5, 2.5}; // in cm
    Double_t Thickness = 0.05; // thickness of beam pipe [cm]
-   TGeoPcon *shape = new TGeoPcon(0., 360., nSects);
+   auto *shape = new TGeoPcon(0., 360., nSects);
    for (Int_t iSect = 0; iSect < nSects; iSect++) {
       shape->DefineSection(iSect, z[iSect], r[iSect], r[iSect] + Thickness);
    }
 
    // ---> Voluwme
-   TGeoVolume *pipe = new TGeoVolume("AtPipe", shape, Carbon);
+   auto *pipe = new TGeoVolume("AtPipe", shape, Carbon);
 
    // --Now create the same but diameter less by Thikness and vacuum instead of Carbon
-   TGeoPcon *Vshape = new TGeoPcon(0., 360., nSects);
+   auto *Vshape = new TGeoPcon(0., 360., nSects);
    for (Int_t iSect = 0; iSect < nSects; iSect++) {
       Vshape->DefineSection(iSect, z[iSect], 0, r[iSect]);
    }
 
    // ---> Volume
-   TGeoVolume *Vpipe = new TGeoVolume("AtPipe", Vshape, Vacuum);
+   auto *Vpipe = new TGeoVolume("AtPipe", Vshape, Vacuum);
 
    // TGeoVolume *TPipe=gGeoManager->MakeTubs("TPipe",Vacuum,0,2.5,3.0,10,0);
 

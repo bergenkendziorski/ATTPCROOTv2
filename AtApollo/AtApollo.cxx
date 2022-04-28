@@ -6,20 +6,24 @@
  *                  copied verbatim in the file "LICENSE"                       *
  ********************************************************************************/
 #include "AtApollo.h"
-#include "AtApolloPoint.h"
 
-#include "FairVolume.h"
-#include "FairRootManager.h"
-#include "FairRun.h"
-#include "FairRuntimeDb.h"
+#include "AtApolloPoint.h"
 #include "AtDetectorList.h"
 #include "AtStack.h"
-#include "TVirtualMC.h"
-#include "TClonesArray.h"
-#include "TGeoManager.h"
-#include "TLorentzVector.h"
+
+#include <FairDetector.h>
+#include <FairLogger.h>
+#include <FairRootManager.h>
+#include <FairVolume.h>
+
+#include <TClonesArray.h>
+#include <TLorentzVector.h>
+#include <TVector3.h>
+#include <TVirtualMC.h>
+#include <TVirtualMCStack.h>
 
 #include <iostream>
+
 using std::cout;
 using std::endl;
 
@@ -46,8 +50,8 @@ AtApollo::~AtApollo()
 void AtApollo::Initialize()
 {
    FairDetector::Initialize();
-   FairRuntimeDb *rtdb = FairRun::Instance()->GetRuntimeDb();
-   // AtApolloGeoPar* par=(AtApolloGeoPar*)(rtdb->getContainer("AtApolloGeoPar"));
+   // FairRuntimeDb *rtdb = FairRun::Instance()->GetRuntimeDb();
+   //  AtApolloGeoPar* par=(AtApolloGeoPar*)(rtdb->getContainer("AtApolloGeoPar"));
    LOG(INFO) << "AtApollo: initialisation";
 }
 
@@ -55,7 +59,7 @@ Bool_t AtApollo::ProcessHits(FairVolume *vol)
 {
    /** This method is called from the MC stepping */
 
-   AtStack *stack = (AtStack *)gMC->GetStack();
+   auto *stack = dynamic_cast<AtStack *>(gMC->GetStack());
    fVolName = gMC->CurrentVolName();
 
    TLorentzVector fPosIn;
@@ -114,7 +118,7 @@ TClonesArray *AtApollo::GetCollection(Int_t iColl) const
    if (iColl == 0) {
       return fAtApolloPointCollection;
    } else {
-      return NULL;
+      return nullptr;
    }
 }
 

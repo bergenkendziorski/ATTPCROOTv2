@@ -2,7 +2,7 @@
 
 #include "AtPad.h"
 
-#include <iostream>
+#include <algorithm>
 
 void AtTrapezoidFilter::Filter(AtPad *pad)
 {

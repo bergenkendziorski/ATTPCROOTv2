@@ -9,11 +9,13 @@
 // -----                  M. Al-Turany   June 2014                     -----
 // -------------------------------------------------------------------------
 
-#include <math.h>
-#include "TROOT.h"
+#include <FairPrimaryGenerator.h>
+
+#include <TROOT.h>
+
 #include "Pythia.h"
-#include "FairPrimaryGenerator.h"
-//#include "FairGenerator.h"
+#include <math.h>
+//#include <FairGenerator.h>
 
 #include "Pythia8Generator.h"
 

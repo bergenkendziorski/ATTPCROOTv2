@@ -14,7 +14,13 @@
 #ifndef PIPE_H
 #define PIPE_H
 
-#include "FairModule.h"
+#include <FairModule.h>
+
+#include <Rtypes.h>
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtPipe : public FairModule {
 public:

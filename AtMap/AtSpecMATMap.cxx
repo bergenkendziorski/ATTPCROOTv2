@@ -1,36 +1,55 @@
 #include "AtSpecMATMap.h"
 
-#include "FairLogger.h"
+#include <FairLogger.h>
 
-#include "TH2Poly.h"
-#include "TCanvas.h"
-#include "TStyle.h"
+#include <Math/Point2D.h>
+#include <Rtypes.h>
+#include <TAxis.h>
+#include <TH2Poly.h>
 
-#include <cassert>
+#include <boost/multi_array/base.hpp>
+#include <boost/multi_array/extent_gen.hpp>
+#include <boost/multi_array/multi_array_ref.hpp>
+#include <boost/multi_array/subarray.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <fstream> // IWYU pragma: keep
 #include <iostream>
+#include <vector>
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
 
-AtSpecMATMap::AtSpecMATMap(Int_t numPads)
+using XYPoint = ROOT::Math::XYPoint;
+
+AtSpecMATMap::AtSpecMATMap(Int_t numPads) : AtMap()
 {
    AtPadCoord.resize(boost::extents[numPads][4][2]);
-   kIsParsed = 0;
-   kGUIMode = 0;
-   kDebug = 0;
    std::fill(AtPadCoord.data(), AtPadCoord.data() + AtPadCoord.num_elements(), 0);
    std::cout << " SpecMAT Map initialized " << std::endl;
    std::cout << " SpecMAT Pad Coordinates container initialized " << std::endl;
-   fPadInd = 0;
    fNumberPads = numPads;
-   fIniPads.clear();
-   hPlane = new TH2Poly();
 }
 
-AtSpecMATMap::~AtSpecMATMap() {}
+AtSpecMATMap::~AtSpecMATMap() = default;
 
-void AtSpecMATMap::Dump() {}
+void AtSpecMATMap::Dump()
+{
+
+   std::ofstream coordmap;
+   coordmap.open("coordmap_specmat.txt");
+   coordmap << " SpecMAT Triangular pad coordinates (centers) - Pad Index - (x,y)" << std::endl;
+
+   for (index i = 0; i < 3174; ++i) {
+      coordmap << i << "  ";
+      coordmap << AtPadCoord[i][3][0] << "  " << AtPadCoord[i][3][1];
+      coordmap << std::endl;
+   }
+
+   coordmap.close();
+}
 
 std::vector<double> TrianglesGenerator()
 {
@@ -44,10 +63,10 @@ std::vector<double> TrianglesGenerator()
    int counter = 0;
    int a = 0;
    const int arrayLength = nElementsInSegment * nSegments;
-   double x0[arrayLength], x1[arrayLength], x2[arrayLength], xCentre[arrayLength], x0next[arrayLength],
-      x1next[arrayLength], x2next[arrayLength];
-   double y0[arrayLength], y1[arrayLength], y2[arrayLength], yCentre[arrayLength], y0next[arrayLength],
-      y1next[arrayLength], y2next[arrayLength];
+   std::vector<double> x0(arrayLength), x1(arrayLength), x2(arrayLength), xCentre(arrayLength), x0next(arrayLength),
+      x1next(arrayLength), x2next(arrayLength);
+   std::vector<double> y0(arrayLength), y1(arrayLength), y2(arrayLength), yCentre(arrayLength), y0next(arrayLength),
+      y1next(arrayLength), y2next(arrayLength);
    double h = 4.725;
 
    for (int i = 1; i < nRaws + 1; i++) {
@@ -143,7 +162,7 @@ std::vector<double> TrianglesGenerator()
 } // End TrianglesGenerator()
 
 // TH2Poly *SpecMATHistoGenerator()
-TH2Poly *AtSpecMATMap::GetAtTpcPlane()
+TH2Poly *AtSpecMATMap::GetPadPlane()
 {
    // TH2Poly *SpecMAThisto = new TH2Poly();
    std::vector<double> arrayAllCoordinates = TrianglesGenerator();
@@ -151,25 +170,19 @@ TH2Poly *AtSpecMATMap::GetAtTpcPlane()
    double y[3];
    int arrayAllCoordinatesSize = arrayAllCoordinates.size();
    for (int i2 = 0; i2 < arrayAllCoordinatesSize / 8; i2++) {
-      if (i2 != 0 && i2 != arrayAllCoordinatesSize * 1 / (6 * 8) && i2 != arrayAllCoordinatesSize * 2 / (6 * 8) &&
-          i2 != arrayAllCoordinatesSize * 3 / (6 * 8) && i2 != arrayAllCoordinatesSize * 4 / (6 * 8) &&
-          i2 != arrayAllCoordinatesSize * 5 / (6 * 8)) {
-         x[0] = arrayAllCoordinates[8 * i2];
-         y[0] = arrayAllCoordinates[8 * i2 + 1];
-         x[1] = arrayAllCoordinates[8 * i2 + 2];
-         y[1] = arrayAllCoordinates[8 * i2 + 3];
-         x[2] = arrayAllCoordinates[8 * i2 + 4];
-         y[2] = arrayAllCoordinates[8 * i2 + 5];
-         hPlane->AddBin(3, x, y);
-      }
+      x[0] = arrayAllCoordinates[8 * i2];
+      y[0] = arrayAllCoordinates[8 * i2 + 1];
+      x[1] = arrayAllCoordinates[8 * i2 + 2];
+      y[1] = arrayAllCoordinates[8 * i2 + 3];
+      x[2] = arrayAllCoordinates[8 * i2 + 4];
+      y[2] = arrayAllCoordinates[8 * i2 + 5];
+      fPadPlane->AddBin(3, x, y);
    }
 
-   if (kGUIMode) {
-      cAtTPCPlane = new TCanvas("cATTPCPlane", "cATTPCPlane", 1000, 1000);
-      gStyle->SetPalette(1);
-      hPlane->Draw("col");
-   }
-   return hPlane;
+   if (kGUIMode)
+      drawPadPlane();
+
+   return fPadPlane;
 } // SpecMATHistoGenerator()
 
 void AtSpecMATMap::SpecMATPadPlane()
@@ -182,20 +195,20 @@ void AtSpecMATMap::SpecMATPadPlane()
    nElementsInSegment3 = arrayAllCoordinates2.size() / (6 * 8);
 
    TH2Poly *XY;
-   XY = GetAtTpcPlane();
+   XY = GetPadPlane();
    // XY = SpecMATHistoGenerator();
    XY->SetTitle("PadPlane X vs Y");
    XY->SetName("XY");
    XY->GetXaxis()->SetTitle("X (mm)");
    XY->GetYaxis()->SetTitle("Y (mm)");
 
-   int currentBin;
+   int currentBin = 0;
    double InitialPoInt_X = 50;
    double InitialPoInt_Y = 50;
    double particleEnergy = 50;
 
-   double binXcentroid;
-   double binYcentroid;
+   double binXcentroid = 0;
+   double binYcentroid = 0;
 
    // Histogram filling example
    XY->Fill(InitialPoInt_X, InitialPoInt_Y, particleEnergy);
@@ -231,7 +244,7 @@ void AtSpecMATMap::SpecMATPadPlane()
              << std::endl;
 } // SpecMATPadPlane
 
-void AtSpecMATMap::GenerateAtTpc()
+void AtSpecMATMap::GeneratePadPlane()
 {
 
    std::cout << " SpecMAT Map : Generating the map geometry of SpecMAT " << std::endl;
@@ -248,36 +261,27 @@ void AtSpecMATMap::GenerateAtTpc()
       AtPadCoord[i][2][1] = arrayAllCoord[8 * i + 5]; // y coordinate of third vertex pad
       AtPadCoord[i][3][0] = arrayAllCoord[8 * i + 6]; // x coordinate of pad center
       AtPadCoord[i][3][1] = arrayAllCoord[8 * i + 7]; // y coordinate of pad center
-      fPadInd++;
    }
 
-   std::cout << " A total of  " << fPadInd << " pads were generated  " << std::endl;
+   std::cout << " A total of  " << fNumberPads << " pads were generated  " << std::endl;
+   kIsParsed = true;
 }
 
-std::vector<Float_t> AtSpecMATMap::CalcPadCenter(Int_t PadRef)
+XYPoint AtSpecMATMap::CalcPadCenter(Int_t PadRef)
 {
-
-   std::vector<Float_t> PadCenter = {-9999, -9999};
-   PadCenter.reserve(2);
-
-   if (!fPadInd || !kIsParsed) {
-
-      std::cout << " AtSpecMATMap::CalcPadCenter Error : Pad plane has not been generated or parsed " << std::endl;
-      return PadCenter;
+   if (!kIsParsed) {
+      LOG(error) << " AtSpecMATMap::CalcPadCenter Error : Pad plane has not been generated or parsed";
+      return {-9999, -9999};
    }
 
-   if (PadRef != -1) { // Boost multi_array crashes with a negative index
-
-      PadCenter[0] = AtPadCoord[PadRef][3][0];
-      PadCenter[1] = AtPadCoord[PadRef][3][1];
-      return PadCenter;
-
-   } else {
-
-      if (kDebug)
-         std::cout << " AtSpecMATMap::CalcPadCenter Error : Pad not found" << std::endl;
-      return PadCenter;
+   if (PadRef == -1) { // Boost multi_array crashes with a negative index
+      LOG(debug) << " AtSpecMATMap::CalcPadCenter Error : Pad not found";
+      return {-9999, -9999};
    }
+
+   auto x = AtPadCoord[PadRef][3][0];
+   auto y = AtPadCoord[PadRef][3][1];
+   return {x, y};
 }
 
-ClassImp(AtSpecMATMap)
+ClassImp(AtSpecMATMap);

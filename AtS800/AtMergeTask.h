@@ -1,19 +1,25 @@
 #ifndef AtMergeTask_H
 #define AtMergeTask_H
 
+#include <Rtypes.h>
+#include <TString.h>
 // FAIRROOT classes
-#include "FairTask.h"
-#include "FairLogger.h"
+#include <FairTask.h>
+
+#include <vector>
 
 // AtTPCROOT classes
 
-// ROOT classes
-#include "TClonesArray.h"
-#include "AtRawEvent.h"
-
-// S800 Classes
-#include "S800Calc.h"
-#include "TCutG.h"
+class FairLogger;
+class S800Calc;
+class TBuffer;
+class TClass;
+class TClonesArray;
+class TCutG;
+class TF1;
+class TFile;
+class TGraph;
+class TMemberInspector;
 
 class AtMergeTask : public FairTask {
 
@@ -36,10 +42,10 @@ public:
 
    Int_t GetS800TsSize();
    Int_t GetMergedTsSize();
-   vector<Double_t> GetParameters();
-   vector<Double_t> GetTofObjCorr();
-   vector<Double_t> GetMTDCObjRange();
-   vector<Double_t> GetMTDCXfRange();
+   std::vector<Double_t> GetParameters();
+   std::vector<Double_t> GetTofObjCorr();
+   std::vector<Double_t> GetMTDCObjRange();
+   std::vector<Double_t> GetMTDCXfRange();
 
    Bool_t isInGlom(Long64_t ts1, Long64_t ts2);
    Bool_t isInPID(S800Calc *s800calc);
@@ -51,36 +57,36 @@ public:
 private:
    FairLogger *fLogger;
 
-   TClonesArray *fRawEventArray;
+   TClonesArray *fRawEventArray{};
    S800Calc *fS800CalcBr;
-   TFile *fS800file;
+   TFile *fS800file{};
 
-   Int_t fTsEvtS800Size, fEvtMerged, fEvtDelta, fTsDelta;
+   Int_t fTsEvtS800Size{}, fEvtMerged{}, fEvtDelta{5}, fTsDelta{1272};
    TString fS800File;
-   vector<Long64_t> fS800Ts;
-   vector<Double_t> fS800Evt;
-   vector<Double_t> fParameters;
-   vector<Double_t> fTofObjCorr;
-   vector<Double_t> fMTDCObjRange;
-   vector<Double_t> fMTDCXfRange;
+   std::vector<Long64_t> fS800Ts;
+   std::vector<Double_t> fS800Evt;
+   std::vector<Double_t> fParameters;
+   std::vector<Double_t> fTofObjCorr;
+   std::vector<Double_t> fMTDCObjRange;
+   std::vector<Double_t> fMTDCXfRange;
 
-   TF1 *fS800TsFunc;
+   TF1 *fS800TsFunc{};
    // TF1 *fOptiFit;
-   Double_t fGlom;
+   Double_t fGlom{2};
 
-   vector<TCutG *> fcutPID1;
-   vector<TCutG *> fcutPID2;
-   vector<TCutG *> fcutPID3;
-   vector<TString> fcutPID1File;
-   vector<TString> fcutPID2File;
-   vector<TString> fcutPID3File;
+   std::vector<TCutG *> fcutPID1;
+   std::vector<TCutG *> fcutPID2;
+   std::vector<TCutG *> fcutPID3;
+   std::vector<TString> fcutPID1File;
+   std::vector<TString> fcutPID2File;
+   std::vector<TString> fcutPID3File;
 
-   Bool_t fIsPersistence;
-   Bool_t fSetCut1;
-   Bool_t fSetCut2;
-   Bool_t fSetCut3;
+   Bool_t fIsPersistence{false};
+   Bool_t fSetCut1{false};
+   Bool_t fSetCut2{false};
+   Bool_t fSetCut3{false};
 
-   TGraph *fS800TsGraph;
+   TGraph *fS800TsGraph{};
 
    ClassDef(AtMergeTask, 1);
 };

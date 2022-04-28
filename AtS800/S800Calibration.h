@@ -1,24 +1,18 @@
 #ifndef __S800CALIBRAtION_HH
 #define __S800CALIBRAtION_HH
 
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <string>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <math.h>
-#include <map>
+#include <Rtypes.h>
 
-#include "TSystem.h"
-#include "TEnv.h"
-#include "TMath.h"
-
-#include "S800Settings.h"
 #include "S800Calc.h"
 
+#include <algorithm>
+#include <ext/alloc_traits.h>
+#include <memory>
+#include <vector>
+
 class GTimeOfFlight;
+class S800;
+class S800Settings;
 
 /**Class responsible for calibrating the S800.  Takes a S800 raw data object as input
 and creates a S800Calc object.  This requires a variety of input files that are specfied
@@ -95,18 +89,18 @@ public:
    std::vector<Float_t> GetCRDCCal() { return fcrdccal; }
 
 private:
-   S800Settings *fSett;
+   S800Settings *fSett{};
    std::vector<std::vector<Float_t>> fped;
    std::vector<std::vector<Float_t>> fslope;
    std::vector<std::vector<Float_t>> foffset;
    std::vector<std::vector<Int_t>> fbad;
    std::vector<Float_t> fcrdccal;
-   Short_t fts800;
+   Short_t fts800{};
 
    std::vector<Float_t> fICoffset;
    std::vector<Float_t> fICslope;
-   Float_t fde_slope;
-   Float_t fde_offset;
+   Float_t fde_slope{};
+   Float_t fde_offset{};
 
    CRDC fcrdc;
    TOF ftof;

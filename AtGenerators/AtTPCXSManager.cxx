@@ -1,17 +1,26 @@
 #include "AtTPCXSManager.h"
 
-AtTPCXSManager *gAtXS = (AtTPCXSManager *)0;
+#include <TH2.h>
 
-AtTPCXSManager::AtTPCXSManager()
+#include <fstream> // IWYU pragma: keep
+#include <iostream>
+#include <sstream> // IWYU pragma: keep
+
+// Allow us use std::make_unique using a protected constructor this struct
+// is only defined in this translation unit (.cpp file)
+namespace {
+struct concrete_AtTPCXSManager : public AtTPCXSManager {
+};
+} // namespace
+
+std::unique_ptr<AtTPCXSManager> AtTPCXSManager::fInstance = nullptr;
+
+AtTPCXSManager *AtTPCXSManager::Instance()
 {
-   if (gAtXS)
-      delete gAtXS;
-   gAtXS = this;
-
-   kIsExFunction = kTRUE;
+   if (fInstance == nullptr)
+      fInstance = std::make_unique<concrete_AtTPCXSManager>();
+   return fInstance.get();
 }
-
-AtTPCXSManager::~AtTPCXSManager() {}
 
 Bool_t AtTPCXSManager::SetExcitationFunction(std::string filename)
 {
@@ -45,8 +54,8 @@ Bool_t AtTPCXSManager::SetExcitationFunction(std::string filename)
                 << " - Angular range Up : " << ARangeUp << " - Angular range Down : " << ARangeDown
                 << " - Total cross section : " << XSTot << "\n";
 
-      Int_t nEbins = static_cast<Int_t>(((ERangeUp + 0.000001) - ERangeDown) / Ebinsize);
-      Int_t nAbins = static_cast<Int_t>(((ARangeUp + 0.000001) - ARangeDown) / Abinsize);
+      auto nEbins = static_cast<Int_t>(((ERangeUp + 0.000001) - ERangeDown) / Ebinsize);
+      auto nAbins = static_cast<Int_t>(((ARangeUp + 0.000001) - ARangeDown) / Abinsize);
 
       std::cout << " Number of energy - angle bins : " << nEbins << " - " << nAbins << "\n";
 

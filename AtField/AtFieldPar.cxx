@@ -14,9 +14,13 @@
 #include "AtFieldPar.h"
 
 #include "AtConstField.h"
-#include "FairParamList.h"
+
+#include <FairField.h>
+#include <FairParGenericSet.h>
+#include <FairParamList.h>
 
 #include <iostream>
+
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -42,7 +46,7 @@ AtFieldPar::AtFieldPar()
 // -------------------------------------------------------------------------
 
 // ------   Destructor   ---------------------------------------------------
-AtFieldPar::~AtFieldPar() {}
+AtFieldPar::~AtFieldPar() = default;
 // -------------------------------------------------------------------------
 
 // ------   Put parameters   -----------------------------------------------
@@ -144,7 +148,7 @@ void AtFieldPar::SetParameters(FairField *field)
    fType = field->GetType();
 
    if (fType == 0) { // constant field
-      AtConstField *fieldConst = (AtConstField *)field;
+      auto *fieldConst = dynamic_cast<AtConstField *>(field);
       fBx = fieldConst->GetBx();
       fBy = fieldConst->GetBy();
       fBz = fieldConst->GetBz();

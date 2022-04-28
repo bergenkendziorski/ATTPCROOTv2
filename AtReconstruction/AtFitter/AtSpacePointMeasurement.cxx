@@ -19,9 +19,23 @@ Adapted to AtTPCROOTv2 by Yassid Ayyad ayyadlim@frib.msu.edu
 */
 
 #include "AtSpacePointMeasurement.h"
-#include "TMatrixD.h"
-#include <cmath>
-#include <iostream>
+
+#include "AtHitCluster.h"
+
+#include <Math/Point3D.h>
+#include <TMatrixDSymfwd.h>
+#include <TMatrixDfwd.h>
+#include <TMatrixT.h>
+#include <TMatrixTSym.h>
+#include <TVectorDfwd.h>
+#include <TVectorT.h>
+#include <TrackCandHit.h>
+
+#include <SpacepointMeasurement.h>
+
+namespace genfit {
+class AbsMeasurement;
+} // namespace genfit
 
 ClassImp(genfit::AtSpacepointMeasurement)
 
@@ -31,9 +45,9 @@ ClassImp(genfit::AtSpacepointMeasurement)
    AtSpacepointMeasurement::AtSpacepointMeasurement() : SpacepointMeasurement() {}
 
    AtSpacepointMeasurement::AtSpacepointMeasurement(const AtHitCluster *detHit, const TrackCandHit *hit)
-      : SpacepointMeasurement()
+      : SpacepointMeasurement(), fCharge(detHit->GetCharge())
    {
-      TVector3 pos = detHit->GetPosition();
+      auto pos = detHit->GetPosition();
       TMatrixD mat = detHit->GetCovMatrix();
 
       rawHitCoords_(0) = pos.X() / 10.;
@@ -51,15 +65,13 @@ ClassImp(genfit::AtSpacepointMeasurement)
       cov(2, 0) = 0.0;
 
       // Forced covariance matrix to be constant. Need to study later.
-      cov(0, 0) = 0.2 / 1.0;
-      cov(1, 1) = 0.2 / 1.0;
-      cov(2, 2) = 1.28 / 1.0;
+      cov(0, 0) = 1.0 / 1.0;  // 0.2
+      cov(1, 1) = 1.0 / 1.0;  // 0.2
+      cov(2, 2) = 1.28 / 1.0; // 1.28
 
       rawHitCov_ = cov;
       detId_ = hit->getDetId();
       hitId_ = hit->getHitId();
-
-      fCharge = detHit->GetCharge();
 
       // std::cout<<" AtSpacepointMeasurement::AtSpacepointMeasurement "<<"\n";
       // std::cout<<rawHitCoords_(0)<<"	"<<rawHitCoords_(1)<<"	  "<<rawHitCoords_(2)<<"	"<<fCharge<<" "<<detId_<<"

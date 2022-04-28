@@ -1,74 +1,52 @@
 #include "AtPSA.h"
 
-// FairRoot classes
-#include "FairRuntimeDb.h"
-#include "FairRun.h"
+#include <FairLogger.h>
 
-// ROOT classes
-#include "TClonesArray.h"
-#include "TSpectrum.h"
-#include "TVector3.h"
-#include "TMath.h"
-
-// STL
 #include <algorithm>
+#include <iostream>
+#include <iterator>
 
-// AtTPCROOT classes
-#include "AtRawEvent.h"
-#include "AtEvent.h"
-#include "AtDigiPar.h"
+// FairRoot classes
+#include <FairRun.h>
+#include <FairRuntimeDb.h>
+// ROOT classes
 #include "AtCalibration.h"
+#include "AtDigiPar.h"
 #include "AtHit.h"
 #include "AtMCPoint.h"
+
+#include <Rtypes.h>
+#include <TClonesArray.h>
+#include <TMath.h>
+#include <TObject.h> // for TObject
+#include <TVector3.h>
 
 using std::distance;
 using std::max_element;
 using std::min_element;
 
-AtPSA::AtPSA()
-{
-   std::cout << "Calling AtPSA Constructor" << std::endl;
-
-   // TODO:Move to class that needs them
-   fIniTB = 0;
-   fEndTB = 512;
-
-   fThreshold = -1;
-   fThresholdlow = -1;
-   fUsingLowThreshold = kFALSE;
-
-   fIsGainCalibrated = kFALSE;
-   fIsJitterCalibrated = kFALSE;
-}
-
-AtPSA::~AtPSA()
-{
-
-   delete fCalibration;
-}
-
 void AtPSA::Init()
 {
-   fCalibration = new AtCalibration();
+   fCalibration = std::make_unique<AtCalibration>();
 
    FairRun *run = FairRun::Instance();
    if (!run)
       LOG(FATAL) << "No analysis run!";
 
-   FairRuntimeDb *db = run->GetRuntimeDb();
+   FairRuntimeDb *db = run->GetRuntimeDb(); // NOLINT
    if (!db)
       LOG(FATAL) << "No runtime database!";
 
-   fPar = (AtDigiPar *)db->getContainer("AtDigiPar");
+   fPar = (AtDigiPar *)db->getContainer("AtDigiPar"); // NOLINT
    if (!fPar)
       LOG(FATAL) << "AtDigiPar not found!!";
 
-   fPadPlaneX = fPar->GetPadPlaneX();
+   fPadPlaneX = fPar->GetPadPlaneX(); // NOLINT
    fPadSizeX = fPar->GetPadSizeX();
    fPadSizeZ = fPar->GetPadSizeZ();
    fPadRows = fPar->GetPadRows();
    fPadLayers = fPar->GetPadLayers();
-   fNumTbs = fPar->GetNumTbs();
+   // fNumTbs = fPar->GetNumTbs();
    fTBTime = fPar->GetTBTime();
    fDriftVelocity = fPar->GetDriftVelocity();
    fMaxDriftLength = fPar->GetDriftLength();
@@ -216,25 +194,18 @@ void AtPSA::SetTBLimits(std::pair<Int_t, Int_t> limits)
    }
 }
 
-void AtPSA::TrackMCPoints(std::multimap<Int_t, std::size_t> &map, AtHit *hit)
+void AtPSA::TrackMCPoints(std::multimap<Int_t, std::size_t> &map, AtHit &hit)
 {
-   typedef std::multimap<Int_t, std::size_t>::iterator MCMapIterator;
+   auto padNum = hit.GetPadNum();
+   for (auto it = map.lower_bound(padNum); it != map.upper_bound(padNum); ++it) {
 
-   // Find every simulated point ID for each valid pad
-   std::pair<MCMapIterator, MCMapIterator> result = map.equal_range(hit->GetHitPadNum());
-   for (MCMapIterator it = result.first; it != result.second; it++) {
-      // std::cout<<fMCSimPointArray->GetEntries()<<"\n";
+      if (fMCSimPointArray != nullptr) {
+         auto *MCPoint = dynamic_cast<AtMCPoint *>(fMCSimPointArray->At(it->second));
 
-      int count = std::distance(result.first, result.second);
-
-      // if(count>1){
-      //  std::cout<<" Count "<<count<<"\n";
-
-      if (fMCSimPointArray != 0) {
-         AtMCPoint *MCPoint = (AtMCPoint *)fMCSimPointArray->At(it->second);
          AtHit::MCSimPoint mcpoint(it->second, MCPoint->GetTrackID(), MCPoint->GetEIni(), MCPoint->GetEnergyLoss(),
                                    MCPoint->GetAIni(), MCPoint->GetMassNum(), MCPoint->GetAtomicNum());
-         hit->SetMCSimPoint(mcpoint);
+         hit.AddMCSimPoint(mcpoint);
+
          // std::cout << " Pad Num : "<<hit->GetHitPadNum()<<" MC Point ID : "<<it->second << std::endl;
          // std::cout << " Track ID : "<<MCPoint->GetTrackID()<<" Energy (MeV) : "<<MCPoint->GetEIni()<<" Angle (deg) :
          // "<<MCPoint->GetAIni()<<"\n"; std::cout << " Mass Number : "<<MCPoint->GetMassNum()<<" Atomic Number

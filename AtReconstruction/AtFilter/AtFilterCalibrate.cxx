@@ -1,12 +1,15 @@
 #include "AtFilterCalibrate.h"
+
 #include "AtPad.h"
 
-#include "FairLogger.h"
+#include <FairLogger.h>
 
+#include <TString.h>
+
+#include <array>
 #include <fstream>
-#include <iostream>
 
-AtFilterCalibrate::AtFilterCalibrate() {}
+AtFilterCalibrate::AtFilterCalibrate() = default;
 
 void AtFilterCalibrate::Init()
 {

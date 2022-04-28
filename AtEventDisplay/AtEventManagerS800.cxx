@@ -1,56 +1,61 @@
-
 #include "AtEventManagerS800.h"
-#include "FairEventManagerEditor.h"
 
-#include "TEveGeoNode.h"
-#include "TEveManager.h"
-#include "TEveProjectionManager.h"
-#include "TEveScene.h"
-#include "TEveViewer.h"
-#include "TEveWindow.h"
-#include "TEveBrowser.h"
-#include "TFile.h"
-#include "TVirtualX.h"
-#include "TRootEmbeddedCanvas.h"
+#include "AtEvent.h" // for AtEvent
 
-#include "TGTab.h"
-#include "TGLViewer.h"
-#include "TGeoManager.h"
-#include "TVirtualX.h"
-#include "TGWindow.h"
-#include "TGButton.h"
-#include "TGLabel.h"
-#include "TGWidget.h"
-#include "TGCanvas.h"
-#include <TCutG.h>
+#include <FairRootManager.h> // for FairRootManager
 
-#include "TEveGedEditor.h"
-#include "TGLEmbeddedViewer.h"
-#include "TCanvas.h"
-#include "TROOT.h"
-#include "TStyle.h"
-#include "TObject.h"
-#include "TH2.h"
-#include "TH2Poly.h"
-#include "TMultiGraph.h"
-#include "TPolyLine.h"
+#include <TCanvas.h>             // for TCanvas
+#include <TChain.h>              // for TChain
+#include <TClonesArray.h>        // for TClonesArray
+#include <TEveBrowser.h>         // for TEveBrowser
+#include <TEveGeoNode.h>         // for TEveGeoTopNode
+#include <TEveManager.h>         // for TEveManager, gEve
+#include <TEveViewer.h>          // for TEveViewer
+#include <TEveWindow.h>          // for TEveWindowPack, TEveWindowFrame
+#include <TFile.h>               // for TFile
+#include <TGButton.h>            // for TGTextButton, TGPictureButton, kBut...
+#include <TGClient.h>            // for TGClient, gClient
+#include <TGFrame.h>             // for TGMainFrame, TGHorizontalFrame, TGV...
+#include <TGLCamera.h>           // for TGLCamera
+#include <TGLViewer.h>           // for TGLViewer
+#include <TGLabel.h>             // for TGLabel
+#include <TGLayout.h>            // for TGLayoutHints, kLHintsCenterX, kLHi...
+#include <TGNumberEntry.h>       // for TGNumberEntry, TGNumberFormat, TGNu...
+#include <TGTab.h>               // for TGTab
+#include <TGWindow.h>            // for TGWindow
+#include <TGeoManager.h>         // for gGeoManager, TGeoManager
+#include <TGeoVolume.h>          // for TGeoVolume
+#include <TH2.h>                 // for TH2F, TH2
+#include <TH2Poly.h>             // for TH2Poly
+#include <TObject.h>             // for TObject
+#include <TROOT.h>               // IWYU pragma: keep
+#include <TRootBrowser.h>        // for TRootBrowser, TRootBrowser::kLeft
+#include <TRootEmbeddedCanvas.h> // for TRootEmbeddedCanvas
+#include <TString.h>             // for TString, operator+, Form
+#include <TStyle.h>              // for TStyle, gStyle
+#include <TSystem.h>             // for TSystem, gSystem
+#include <TVirtualPad.h>         // for TVirtualPad, gPad
+#include <TVirtualX.h>           // for TVirtualX
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
-#define cBLUE "\033[1;34m"
-#define cWHITERED "\033[37;41m"
+#include "S800Calc.h" // for S800Calc, CRDC, MultiHitTOF, IC
 
-#include <iostream>
+#include <cmath>    // for isnan, atan
+#include <iostream> // for operator<<, basic_ostream::operator<<
+#include <string>   // for allocator, char_traits, operator+
+#include <vector>   // for vector
+class TGeoNode;     // lines 84-84
 
-class TGeoNode;
-
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
+constexpr auto cBLUE = "\033[1;34m";
+constexpr auto cWHITERED = "\033[37;41m";
 using namespace std;
 
 ClassImp(AtEventManagerS800);
 
-AtEventManagerS800 *AtEventManagerS800::fInstance = 0;
+AtEventManagerS800 *AtEventManagerS800::fInstance = nullptr;
 AtEventManagerS800 *AtEventManagerS800::Instance()
 {
    return fInstance;
@@ -58,18 +63,18 @@ AtEventManagerS800 *AtEventManagerS800::Instance()
 
 AtEventManagerS800::AtEventManagerS800()
    : TEveEventManager("AtEventManagerS800", ""), fRootManager(FairRootManager::Instance()),
-     fRunAna(FairRunAna::Instance()), fEntry(0), fEvent(0), fCurrentEvent(0), f3DThresDisplay(0), fCvsPadPlane(0),
-     fPadWave(0), fPadAll(0), fCvsQEvent(0), fCvsHough(0), fCvsRad(0), drawallpad(0), eraseQevent(0), drawHoughSpace(0),
-     saveASCIIevent(0), toggleCorr(0), kDrawAllOn(0), kDrawAllOff(0), kEraseQ(0), kDrawHoughOn(0), kDraw3DGeo(0),
-     kDraw3DHist(0), kToggleData(0), k3DThreshold(0), fCvsLvsTheta(0), fCvsPID(0), fCvsMesh(0), fCvsPIDFull(0),
-     fCvsPID2(0), fCvsPID2Full(0)
+     fRunAna(FairRunAna::Instance()), fEntry(0), fEvent(nullptr), fCurrentEvent(nullptr), f3DThresDisplay(nullptr),
+     fCvsPadPlane(nullptr), fPadWave(nullptr), fPadAll(nullptr), fCvsQEvent(nullptr), fCvsHough(nullptr),
+     fCvsRad(nullptr), drawallpad(nullptr), eraseQevent(nullptr), drawHoughSpace(nullptr), saveASCIIevent(nullptr),
+     toggleCorr(nullptr), kDrawAllOn(false), kDrawAllOff(false), kEraseQ(false), kDrawHoughOn(false), kDraw3DGeo(false),
+     kDraw3DHist(false), kToggleData(false), k3DThreshold(0), fCvsLvsTheta(nullptr), fCvsPID(nullptr),
+     fCvsMesh(nullptr), fCvsPIDFull(nullptr), fCvsPID2(nullptr), fCvsPID2Full(nullptr)
 
 {
    fInstance = this;
-   kEraseQ = kFALSE;
 }
 
-AtEventManagerS800::~AtEventManagerS800() {}
+AtEventManagerS800::~AtEventManagerS800() = default;
 
 /*void
 AtEventManagerS800::InitRiemann(Int_t option, Int_t level, Int_t nNodes)
@@ -90,20 +95,23 @@ void AtEventManagerS800::Init(Int_t option, Int_t level, Int_t nNodes)
    Int_t dummy;
    UInt_t width, height;
    UInt_t widthMax = 1400, heightMax = 650;
-   Double_t ratio = (Double_t)widthMax / heightMax;
+   // Double_t ratio = (Double_t)widthMax / heightMax;
    TVirtualX::Instance()->GetWindowSize(gClient->GetRoot()->GetId(), dummy, dummy, width, height);
    // Assume that width of screen is always larger than the height of screen
-   if (width > widthMax) {
+
+   /*
+     if (width > widthMax) {
       width = widthMax;
       height = heightMax;
    } else
       height = (Int_t)(width / ratio);
+   */
    // gEve->GetMainWindow()->Resize(width,height);
 
    /**************************************************************************/
 
-   TEveWindowSlot *slot = 0;
-   TEveWindowPack *pack = 0;
+   TEveWindowSlot *slot = nullptr;
+   TEveWindowPack *pack = nullptr;
 
    // 3D
    slot = TEveWindow::CreateWindowInTab(gEve->GetBrowser()->GetTabRight());
@@ -149,7 +157,7 @@ void AtEventManagerS800::Init(Int_t option, Int_t level, Int_t nNodes)
    fCvsPadPlane->AddExec("ex","AtEventManagerS800::DrawWave()");*/
 
    slot = pack2->NewSlotWithWeight(1.5);
-   TRootEmbeddedCanvas *ecvs01 = new TRootEmbeddedCanvas();
+   auto *ecvs01 = new TRootEmbeddedCanvas();
    TEveWindowFrame *frame01 = slot->MakeFrame(ecvs01);
    frame01->SetElementName("AtTPC Mesh");
    pack->GetEveFrame()->SetShowTitleBar(kFALSE);
@@ -157,7 +165,7 @@ void AtEventManagerS800::Init(Int_t option, Int_t level, Int_t nNodes)
 
    // Pad Plane
    slot = pack2->NewSlotWithWeight(1.5);
-   TRootEmbeddedCanvas *ecvs = new TRootEmbeddedCanvas();
+   auto *ecvs = new TRootEmbeddedCanvas();
    TEveWindowFrame *frame = slot->MakeFrame(ecvs);
    frame->SetElementName("AtTPC Pad Plane");
    pack->GetEveFrame()->SetShowTitleBar(kFALSE);
@@ -192,13 +200,13 @@ void AtEventManagerS800::Init(Int_t option, Int_t level, Int_t nNodes)
    pack3->SetElementName("S800 PID1");
 
    slot2 = pack3->NewSlotWithWeight(1.5);
-   TRootEmbeddedCanvas *ecvs3 = new TRootEmbeddedCanvas();
+   auto *ecvs3 = new TRootEmbeddedCanvas();
    TEveWindowFrame *frame3 = slot2->MakeFrame(ecvs3);
    frame3->SetElementName("T[Xf_Obj]-TObj (gated)");
    fCvsPID = ecvs3->GetCanvas();
 
    slot2 = pack3->NewSlotWithWeight(1.5);
-   TRootEmbeddedCanvas *ecvs31 = new TRootEmbeddedCanvas();
+   auto *ecvs31 = new TRootEmbeddedCanvas();
    TEveWindowFrame *frame31 = slot2->MakeFrame(ecvs31);
    frame31->SetElementName("T[Xf_Obj]-TObj (full)");
    fCvsPIDFull = ecvs31->GetCanvas();
@@ -210,13 +218,13 @@ void AtEventManagerS800::Init(Int_t option, Int_t level, Int_t nNodes)
    pack3b->SetElementName("S800 PID2");
 
    slot2b = pack3b->NewSlotWithWeight(1.5);
-   TRootEmbeddedCanvas *ecvs3b = new TRootEmbeddedCanvas();
+   auto *ecvs3b = new TRootEmbeddedCanvas();
    TEveWindowFrame *frame3b = slot2b->MakeFrame(ecvs3b);
    frame3b->SetElementName("ICSumE-ToF (gated)");
    fCvsPID2 = ecvs3b->GetCanvas();
 
    slot2b = pack3b->NewSlotWithWeight(1.5);
-   TRootEmbeddedCanvas *ecvs31b = new TRootEmbeddedCanvas();
+   auto *ecvs31b = new TRootEmbeddedCanvas();
    TEveWindowFrame *frame31b = slot2b->MakeFrame(ecvs31b);
    frame31b->SetElementName("ICSumE-ToF (full)");
    fCvsPID2Full = ecvs31b->GetCanvas();
@@ -248,13 +256,13 @@ void AtEventManagerS800::Init(Int_t option, Int_t level, Int_t nNodes)
    pack4->SetElementName("Reconstruction");
 
    slot3 = pack4->NewSlotWithWeight(1.5);
-   TRootEmbeddedCanvas *ecvs4 = new TRootEmbeddedCanvas();
+   auto *ecvs4 = new TRootEmbeddedCanvas();
    TEveWindowFrame *frame4 = slot3->MakeFrame(ecvs4);
    frame4->SetElementName("Cumulated PadPlane Hits");
    fCvsHough = ecvs4->GetCanvas();
 
    slot3 = pack4->NewSlotWithWeight(1.5);
-   TRootEmbeddedCanvas *ecvs4_add = new TRootEmbeddedCanvas();
+   auto *ecvs4_add = new TRootEmbeddedCanvas();
    TEveWindowFrame *frame4_add = slot3->MakeFrame(ecvs4_add);
    frame4_add->SetElementName("Track Length vs Theta");
    fCvsLvsTheta = ecvs4_add->GetCanvas();
@@ -348,7 +356,7 @@ void AtEventManagerS800::Init(Int_t option, Int_t level, Int_t nNodes)
 
    if (gGeoManager) {
       TGeoNode *geoNode = gGeoManager->GetTopNode();
-      TEveGeoTopNode *topNode = new TEveGeoTopNode(gGeoManager, geoNode, option, level, nNodes);
+      auto *topNode = new TEveGeoTopNode(gGeoManager, geoNode, option, level, nNodes);
       gEve->AddGlobalElement(topNode);
 
       Int_t transparency = 80;
@@ -407,17 +415,17 @@ void AtEventManagerS800::NextEvent()
    Bool_t gated = kFALSE;
    while (gated == kFALSE) {
       fEntry += 1;
-      cArray = NULL;
-      cevent = NULL;
+      cArray = nullptr;
+      cevent = nullptr;
       if (fEntry < 1 || fEntry > Entries) {
          fEntry = Entries;
          std::cout << " No gated events found! " << std::endl;
          break;
       }
       fRootManager->ReadEvent(fEntry);
-      cArray = (TClonesArray *)fRootManager->GetObject("AtEventH");
-      cevent = (AtEvent *)cArray->At(0);
-      gated = cevent->IsExtGate();
+      cArray = dynamic_cast<TClonesArray *>(fRootManager->GetObject("AtEventH"));
+      cevent = dynamic_cast<AtEvent *>(cArray->At(0));
+      gated = cevent->IsInGate();
    }
 
    std::cout << " Event number : " << fEntry << std::endl;
@@ -430,17 +438,17 @@ void AtEventManagerS800::PrevEvent()
    Bool_t gated = kFALSE;
    while (gated == kFALSE) {
       fEntry -= 1;
-      cArray = NULL;
-      cevent = NULL;
+      cArray = nullptr;
+      cevent = nullptr;
       if (fEntry < 1 || fEntry > Entries) {
          fEntry = 1;
          std::cout << " No gated events found! " << std::endl;
          break;
       }
       fRootManager->ReadEvent(fEntry);
-      cArray = (TClonesArray *)fRootManager->GetObject("AtEventH");
-      cevent = (AtEvent *)cArray->At(0);
-      gated = cevent->IsExtGate();
+      cArray = dynamic_cast<TClonesArray *>(fRootManager->GetObject("AtEventH"));
+      cevent = dynamic_cast<AtEvent *>(cArray->At(0));
+      gated = cevent->IsInGate();
    }
 
    std::cout << " Event number : " << fEntry << std::endl;
@@ -485,7 +493,7 @@ void AtEventManagerS800::FillPIDFull()
       //    if(cS800Array == nullptr) break;
       //    cS800Calc = (S800Calc*) cS800Array->At(0);
 
-      cS800Calc = (S800Calc *)fRootManager->GetObject("s800cal");
+      cS800Calc = dynamic_cast<S800Calc *>(fRootManager->GetObject("s800cal"));
       if (cS800Calc == nullptr)
          break;
       // cS800Calc = (S800Calc*) cS800Array->At(0);
@@ -514,13 +522,13 @@ void AtEventManagerS800::FillPIDFull()
       Float_t S800_timeXfSelect = -999;
       Float_t ObjCorr = -999;
 
-      for (int k = 0; k < S800_timeMTDCXf.size(); k++) {
-         if (S800_timeMTDCXf.at(k) > 140 && S800_timeMTDCXf.at(k) < 230)
-            S800_timeXfSelect = S800_timeMTDCXf.at(k);
+      for (float k : S800_timeMTDCXf) {
+         if (k > 140 && k < 230)
+            S800_timeXfSelect = k;
       }
-      for (int k = 0; k < S800_timeMTDCObj.size(); k++) {
-         if (S800_timeMTDCObj.at(k) > -115 && S800_timeMTDCObj.at(k) < -20)
-            S800_timeObjSelect = S800_timeMTDCObj.at(k);
+      for (float k : S800_timeMTDCObj) {
+         if (k > -115 && k < -20)
+            S800_timeObjSelect = k;
       }
 
       Double_t XfObj_tof = S800_timeXfSelect - S800_timeObjSelect;
@@ -568,7 +576,7 @@ void AtEventManagerS800::DrawWave()
    if (!select)
       return;
    if (select->InheritsFrom(TH2::Class())) {
-      TH2Poly *h = (TH2Poly *)select;
+      auto *h = dynamic_cast<TH2Poly *>(select);
       gPad->GetCanvas()->FeedbackMode(kTRUE);
       // Char_t *bin_name = h->GetBinName();
 
@@ -623,11 +631,11 @@ void AtEventManagerS800::make_gui()
    TEveBrowser *browser = gEve->GetBrowser();
    browser->StartEmbedding(TRootBrowser::kLeft);
 
-   TGMainFrame *frmMain = new TGMainFrame(gClient->GetRoot(), 1000, 600);
+   auto *frmMain = new TGMainFrame(gClient->GetRoot(), 1000, 600);
    frmMain->SetWindowName("XX GUI");
    frmMain->SetCleanup(kDeepCleanup);
 
-   TGVerticalFrame *hf = new TGVerticalFrame(frmMain);
+   auto *hf = new TGVerticalFrame(frmMain);
    {
 
       // TString icondir( Form("%s/icons/", gSystem->Getenv("VMCWORKDIR")) );
@@ -675,11 +683,11 @@ void AtEventManagerS800::make_gui()
       // b->Connect("Clicked()", "AtEventManagerS800", fInstance, "GotoEvent(Int_t)");
    }
 
-   TGHorizontalFrame *hf_2 = new TGHorizontalFrame(frmMain);
+   auto *hf_2 = new TGHorizontalFrame(frmMain);
    {
 
       TString icondir(Form("%s/icons/", gSystem->Getenv("VMCWORKDIR")));
-      TGPictureButton *b = 0;
+      TGPictureButton *b = nullptr;
 
       b = new TGPictureButton(hf_2, gClient->GetPicture(icondir + "arrow_left.gif"));
       hf_2->AddFrame(b);
@@ -697,22 +705,22 @@ void AtEventManagerS800::make_gui()
    //  TFile* file =FairRunAna::Instance()->GetInputFile();
    TFile *file = FairRootManager::Instance()->GetInChain()->GetFile();
    Infile += file->GetName();
-   TGLabel *TFName = new TGLabel(frmMain, Infile.Data());
+   auto *TFName = new TGLabel(frmMain, Infile.Data());
    frmMain->AddFrame(TFName);
 
    UInt_t RunId = FairRunAna::Instance()->getRunId();
    TString run = "Run Id : ";
    run += RunId;
-   TGLabel *TRunId = new TGLabel(frmMain, run.Data());
+   auto *TRunId = new TGLabel(frmMain, run.Data());
    frmMain->AddFrame(TRunId);
 
    TString nevent = "No of events : ";
    nevent += Entries;
-   TGLabel *TEvent = new TGLabel(frmMain, nevent.Data());
+   auto *TEvent = new TGLabel(frmMain, nevent.Data());
    frmMain->AddFrame(TEvent);
 
-   TGHorizontalFrame *f = new TGHorizontalFrame(frmMain);
-   TGLabel *l = new TGLabel(f, "Current Event:");
+   auto *f = new TGHorizontalFrame(frmMain);
+   auto *l = new TGLabel(f, "Current Event:");
    f->AddFrame(l, new TGLayoutHints(kLHintsLeft | kLHintsCenterY, 1, 2, 1, 1));
 
    fCurrentEvent = new TGNumberEntry(f, 0., 6, -1, TGNumberFormat::kNESInteger, TGNumberFormat::kNEANonNegative,
@@ -721,8 +729,8 @@ void AtEventManagerS800::make_gui()
    fCurrentEvent->Connect("ValueSet(Long_t)", "AtEventManagerS800", fInstance, "SelectEvent()");
    frmMain->AddFrame(f);
 
-   TGHorizontalFrame *fThres = new TGHorizontalFrame(frmMain);
-   TGLabel *lThres = new TGLabel(fThres, "3D threshold:");
+   auto *fThres = new TGHorizontalFrame(frmMain);
+   auto *lThres = new TGLabel(fThres, "3D threshold:");
    fThres->AddFrame(lThres, new TGLayoutHints(kLHintsLeft | kLHintsCenterY, 1, 2, 1, 1));
    f3DThresDisplay = new TGNumberEntry(fThres, 0., 6, -1, TGNumberFormat::kNESInteger, TGNumberFormat::kNEANonNegative,
                                        TGNumberFormat::kNELLimitMinMax, 0, Entries);

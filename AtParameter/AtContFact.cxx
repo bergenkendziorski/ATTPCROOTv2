@@ -1,11 +1,19 @@
 #include "AtContFact.h"
+
+#include <FairContFact.h>
+
+#include <TList.h>
+#include <TString.h>
+
+#include <cstring>
+
 //#include "AtGeoPar.h"
 #include "AtDigiPar.h"
 #include "AtTriggerPar.h"
 
-#include "FairRuntimeDb.h"
+#include <FairRuntimeDb.h>
 
-#include <iostream>
+class FairParSet;
 
 ClassImp(AtContFact)
 
@@ -20,7 +28,7 @@ AtContFact::AtContFact() : FairContFact()
    FairRuntimeDb::instance()->addContFactory(this);
 }
 
-AtContFact::~AtContFact() {}
+AtContFact::~AtContFact() = default;
 
 void AtContFact::setAllContainers()
 {
@@ -35,11 +43,11 @@ void AtContFact::setAllContainers()
 
    containers -> Add(p);*/
 
-   FairContainer *p = new FairContainer("AtDigiPar", "AtTPC Parameter Container", "");
+   auto *p = new FairContainer("AtDigiPar", "AtTPC Parameter Container", ""); // NOLINT
 
    containers->Add(p);
 
-   FairContainer *pp = new FairContainer("AtTriggerPar", "AtTPC Parameter Container", "");
+   auto *pp = new FairContainer("AtTriggerPar", "AtTPC Parameter Container", ""); // NOLINT
 
    containers->Add(pp);
 }
@@ -52,7 +60,7 @@ FairParSet *AtContFact::createContainer(FairContainer *c)
        of this container, the name is concatinated with the context.
    */
    const char *name = c->GetName();
-   FairParSet *p = NULL;
+   FairParSet *p = nullptr;
 
    /*if (strcmp(name, "STGeoPar") == 0) {
      p = new STGeoPar(c->getConcatName().Data(),

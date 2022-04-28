@@ -3,10 +3,14 @@
 
 #include "AtFilter.h"
 
-#include "TString.h"
+#include <TString.h>
 
-#include <vector>
+#include <iosfwd>
+#include <memory>
 #include <unordered_map>
+
+class AtPad;
+class AtRawEvent;
 
 using calibrationMap = std::unordered_map<int, float>;
 using filePtr = std::unique_ptr<std::ifstream>;

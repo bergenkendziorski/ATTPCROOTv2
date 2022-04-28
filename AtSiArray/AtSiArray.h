@@ -1,14 +1,23 @@
 #ifndef AtSIARRAY_H
 #define AtSIARRAY_H
 
-#include "FairDetector.h"
+#include <FairDetector.h>
 
-#include "TVector3.h"
-#include "TLorentzVector.h"
+#include <Rtypes.h>
+#include <TLorentzVector.h>
+#include <TString.h>
+#include <TVector3.h>
 
-class AtMCPoint;
+#include <string>
+#include <utility>
+
+class AtSiPoint;
 class FairVolume;
 class TClonesArray;
+class TBuffer;
+class TClass;
+class TList;
+class TMemberInspector;
 
 class AtSiArray : public FairDetector {
 
@@ -56,10 +65,10 @@ public:
    /**      This method is an example of how to add your own point
     *       of type AtTpcPoint to the clones array
     */
-   AtMCPoint *
+   AtSiPoint *
    AddHit(Int_t trackID, Int_t detID, TVector3 pos, TVector3 mom, Double_t time, Double_t length, Double_t eLoss);
 
-   AtMCPoint *AddHit(Int_t trackID, Int_t detID, TString VolName, Int_t detCopyID, TVector3 posIn, TVector3 pos_out,
+   AtSiPoint *AddHit(Int_t trackID, Int_t detID, TString VolName, Int_t detCopyID, TVector3 posIn, TVector3 pos_out,
                      TVector3 momIn, TVector3 momOut, Double_t time, Double_t length, Double_t eLoss, Double_t EIni,
                      Double_t AIni, Int_t A, Int_t Z);
 
@@ -93,21 +102,21 @@ private:
 
    Int_t fTrackID;                 //!  track index
    Int_t fVolumeID;                //!  volume id
-   Int_t fDetCopyID;               //!  Det volume id  // added by Marc
-   Int_t fsector;                  //!  volume id
+   Int_t fDetCopyID{};             //!  Det volume id  // added by Marc
+   Int_t fsector{};                //!  volume id
    TLorentzVector fPosIn, fPosOut; //!  position
    TLorentzVector fMomIn, fMomOut; //!  momentum
-   Double32_t fTime_in;            //!  time when entering active volume
-   Double32_t fTime_out;           //!  time when exiting active volume
+   Double32_t fTime_in{};          //!  time when entering active volume
+   Double32_t fTime_out{};         //!  time when exiting active volume
    Double32_t fTime;               //!  time
-   Double32_t fLength_in;          //!  length when entering active volume
-   Double32_t fLength_out;         //!  length when exiting active volume
+   Double32_t fLength_in{};        //!  length when entering active volume
+   Double32_t fLength_out{};       //!  length when exiting active volume
    Double32_t fLength;             //!  length
    Double32_t fELoss;              //!  energy loss
    Int_t fPosIndex;                //!
-   TClonesArray *fTraCollection;   //!  The hit collection
-   Bool_t kGeoSaved;               //!
-   TList *flGeoPar;                //!
+   TClonesArray *fTraCollection{}; //!  The hit collection
+   Bool_t kGeoSaved{};             //!
+   TList *flGeoPar{};              //!
    TString fVolName;
    Double32_t fELossAcc;
    TLorentzVector InPos;

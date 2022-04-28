@@ -8,10 +8,14 @@
 #ifndef APOLLOPOINT_H
 #define APOLLOPOINT_H 1
 
-#include "FairMCPoint.h"
-#include "TVector3.h"
+#include <FairMCPoint.h>
 
-#include "TObject.h"
+#include <Rtypes.h>
+#include <TVector3.h>
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtApolloPoint : public FairMCPoint {
 
@@ -50,7 +54,7 @@ private:
    AtApolloPoint operator=(const AtApolloPoint &point);
 
 protected:
-   Int_t fCrystalID;
+   Int_t fCrystalID{};
 
    ClassDef(AtApolloPoint, 1)
 };

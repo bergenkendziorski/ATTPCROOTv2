@@ -1,25 +1,22 @@
 #ifndef AtFITTER_H
 #define AtFITTER_H
 
-#include "AtDigiPar.h"
-#include "AtTrack.h"
-#include "AtEvent.h"
-#include "AtPatternEvent.h"
+#include <Rtypes.h>
+#include <TObject.h>
 
-// FairRoot classes
-#include "FairRootManager.h"
-#include "FairLogger.h"
+#include <tuple>
+#include <vector>
 
-// GENFIT
-#include "Track.h"
-#include "TrackCand.h"
-#include "RKTrackRep.h"
-#include "Exception.h"
+class AtDigiPar;
+class AtTrack;
+class FairLogger;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+namespace genfit {
+class Track;
+} // namespace genfit
 
 namespace AtFITTER {
 
@@ -32,9 +29,12 @@ public:
    virtual genfit::Track *FitTracks(AtTrack *track) = 0;
    virtual void Init() = 0;
 
+   void MergeTracks(std::vector<AtTrack> *trackCandSource, std::vector<AtTrack> *trackJunkSource,
+                    std::vector<AtTrack> *trackDest, bool fitDirection, bool simulationConv);
+
 protected:
-   FairLogger *fLogger; ///< logger pointer
-   AtDigiPar *fPar;     ///< parameter container
+   FairLogger *fLogger{}; ///< logger pointer
+   AtDigiPar *fPar{};     ///< parameter container
    std::tuple<Double_t, Double_t>
    GetMomFromBrho(Double_t A, Double_t Z,
                   Double_t brho); ///< Returns momentum (in GeV) from Brho assuming M (amu) and Z;

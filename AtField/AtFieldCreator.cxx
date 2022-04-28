@@ -12,37 +12,40 @@
 
 #include "AtFieldCreator.h"
 
-#include "AtFieldPar.h"
 #include "AtConstField.h"
+#include "AtFieldPar.h"
 
-#include "FairRunAna.h"
-#include "FairRuntimeDb.h"
-#include "FairField.h"
+#include <FairField.h>
+#include <FairFieldFactory.h>
+#include <FairParSet.h>
+#include <FairRunAna.h>
+#include <FairRuntimeDb.h>
 
 #include <iostream>
+
 using std::cerr;
 using std::cout;
 using std::endl;
 
 static AtFieldCreator gAtFieldCreator;
 
-AtFieldCreator::AtFieldCreator() : FairFieldFactory(), fFieldPar(NULL)
+AtFieldCreator::AtFieldCreator() : FairFieldFactory(), fFieldPar(nullptr)
 {
    fCreator = this;
 }
 
-AtFieldCreator::~AtFieldCreator() {}
+AtFieldCreator::~AtFieldCreator() = default;
 
 void AtFieldCreator::SetParm()
 {
    FairRunAna *Run = FairRunAna::Instance();
    FairRuntimeDb *RunDB = Run->GetRuntimeDb();
-   fFieldPar = (AtFieldPar *)RunDB->getContainer("AtFieldPar");
+   fFieldPar = dynamic_cast<AtFieldPar *>(RunDB->getContainer("AtFieldPar"));
 }
 
 FairField *AtFieldCreator::createFairField()
 {
-   FairField *fMagneticField = 0;
+   FairField *fMagneticField = nullptr;
 
    if (!fFieldPar) {
       cerr << "-E-  No field parameters available!" << endl;

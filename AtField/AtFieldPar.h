@@ -14,10 +14,16 @@
 #ifndef AtFieldPar_H
 #define AtFieldPar_H 1
 
-#include "FairParGenericSet.h"
+#include <FairParGenericSet.h>
+
+#include <Rtypes.h>
+#include <TString.h>
 
 class FairField;
 class FairParamList;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 const int kMaxFieldMapType = 5;
 

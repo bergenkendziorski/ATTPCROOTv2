@@ -1,17 +1,29 @@
 #include "AtMap.h"
 
-#include "FairLogger.h"
+#include <FairLogger.h>
 
-#include "TH2Poly.h"
-#include "TDOMParser.h"
-#include "TXMLNode.h"
+#include <Rtypes.h>
+#include <TCanvas.h>
+#include <TDOMParser.h>
+#include <TH2Poly.h>
+#include <TStyle.h>
+#include <TXMLDocument.h>
+#include <TXMLNode.h>
 
+#include <boost/multi_array/base.hpp>
+#include <boost/multi_array/extent_gen.hpp>
+
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
+#include <iterator>
+#include <memory>
+#include <utility>
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
 
 std::ostream &operator<<(std::ostream &os, const AtMap::InhibitType &t)
 {
@@ -24,22 +36,20 @@ std::ostream &operator<<(std::ostream &os, const AtMap::InhibitType &t)
    return os;
 }
 
-AtMap::AtMap() : AtPadCoord(boost::extents[10240][3][2]) {}
+AtMap::AtMap() : AtPadCoord(boost::extents[10240][3][2]), fPadPlane(new TH2Poly()) {}
 
-AtMap::~AtMap() {}
-
-Int_t AtMap::GetPadNum(const PadReference &PadRef) const
+Int_t AtMap::GetPadNum(const AtPadReference &PadRef) const
 {
 
    // Option 1: Int key - vector<int> value
-   // std::map<int, std::vector<int>>::const_iterator ite = AtTPCPadMap.find(1);
+   // std::map<int, std::vector<int>>::const_iterator ite = fPadMap.find(1);
    // std::string value = it->second;
    // Option 2: vector<int> key - int value
 
-   auto its = AtTPCPadMap.find(PadRef);
+   auto its = fPadMap.find(PadRef);
 
-   // std::cout<<int(AtTPCPadMap.find(test) == AtTPCPadMap.end())<<endl;
-   if (its == AtTPCPadMap.end()) {
+   // std::cout<<int(fPadMap.find(test) == fPadMap.end())<<endl;
+   if (its == fPadMap.end()) {
       if (kDebug)
          std::cerr << " AtTpcMap::GetPadNum - Pad key not found - CoboID : " << PadRef.cobo
                    << "  AsadID : " << PadRef.asad << "  AgetID : " << PadRef.aget << "  ChannelID : " << PadRef.ch
@@ -52,10 +62,9 @@ Int_t AtMap::GetPadNum(const PadReference &PadRef) const
 
 Bool_t AtMap::ParseInhibitMap(TString inimap, AtMap::InhibitType type)
 {
-
    std::ifstream fIni(inimap.Data());
 
-   Int_t pad;
+   Int_t pad = 0;
 
    LOG(info) << cYELLOW << __func__ << " - Parsing map for inhibited pads of type " << type << cNORMAL;
    if (fIni.fail()) {
@@ -93,9 +102,9 @@ AtMap::InhibitType AtMap::IsInhibited(Int_t PadNum)
 
 int AtMap::GetPadSize(int padNum)
 {
-   if (AtTPCPadSize.find(padNum) == AtTPCPadSize.end())
+   if (fPadSizeMap.find(padNum) == fPadSizeMap.end())
       return -1000;
-   return AtTPCPadSize[padNum];
+   return fPadSizeMap[padNum];
 }
 void AtMap::ParseAtTPCMap(TXMLNode *node)
 {
@@ -123,11 +132,11 @@ void AtMap::ParseAtTPCMap(TXMLNode *node)
             fSizeID = atoi(node->GetText());
       }
    }
-   PadReference ref = {fCoboID, fAsadID, fAgetID, fChannelID};
+   AtPadReference ref = {fCoboID, fAsadID, fAgetID, fChannelID};
 
-   AtTPCPadMap.insert(std::pair<PadReference, int>(ref, fPadID));
-   AtTPCPadMapInverse.insert(std::pair<int, PadReference>(fPadID, ref));
-   AtTPCPadSize.insert(std::pair<int, int>(fPadID, fSizeID));
+   fPadMap.insert(std::pair<AtPadReference, int>(ref, fPadID));
+   fPadMapInverse.insert(std::pair<int, AtPadReference>(fPadID, ref));
+   fPadSizeMap.insert(std::pair<int, int>(fPadID, fSizeID));
 }
 
 void AtMap::ParseMapList(TXMLNode *node)
@@ -154,13 +163,13 @@ void AtMap::ParseMapList(TXMLNode *node)
       }
    }
 
-   kIsParsed = 1;
+   kIsParsed = true;
 }
 
 Bool_t AtMap::ParseXMLMap(Char_t const *xmlfile)
 {
 
-   TDOMParser *domParser = new TDOMParser();
+   auto domParser = std::make_unique<TDOMParser>();
    domParser->SetValidate(false);
    Int_t parsecode = domParser->ParseFile(xmlfile);
    if (parsecode < 0) {
@@ -170,18 +179,17 @@ Bool_t AtMap::ParseXMLMap(Char_t const *xmlfile)
    TXMLNode *node = domParser->GetXMLDocument()->GetRootNode();
    ParseMapList(node->GetChildren());
    // itrEnd = pmap.end();
-   delete domParser;
 
-   LOG(INFO) << "Pad map has an average load of " << AtTPCPadMap.load_factor() << " and a max load of "
-             << AtTPCPadMap.max_load_factor() << " with buckets " << AtTPCPadMap.bucket_count() << " for "
-             << AtTPCPadMap.size() << " pads.";
+   LOG(INFO) << "Pad map has an average load of " << fPadMap.load_factor() << " and a max load of "
+             << fPadMap.max_load_factor() << " with buckets " << fPadMap.bucket_count() << " for " << fPadMap.size()
+             << " pads.";
 
    return true;
 }
 
 Bool_t AtMap::DumpAtTPCMap()
 {
-   if (!fPadInd || !kIsParsed) {
+   if (!kIsParsed) {
 
       std::cout << " AtTpcMap::DumpAtTPCMap Error : Pad plane has not been generated or parsed - Exiting... "
                 << std::endl;
@@ -191,9 +199,9 @@ Bool_t AtMap::DumpAtTPCMap()
 
    std::ostream_iterator<int> ii(std::cout, ", ");
 
-   for (auto it = this->AtTPCPadMap.begin(); it != this->AtTPCPadMap.end(); ++it) {
-      std::cout << " [ " << (*it).second << ", ";
-      std::cout << it->first.cobo << "," << it->first.asad << "," << it->first.aget << "," << it->first.ch;
+   for (auto &it : this->fPadMap) {
+      std::cout << " [ " << it.second << ", ";
+      std::cout << it.first.cobo << "," << it.first.asad << "," << it.first.aget << "," << it.first.ch;
       std::cout << "]" << std::endl;
       ;
    }
@@ -201,40 +209,38 @@ Bool_t AtMap::DumpAtTPCMap()
    return true;
 }
 
-bool AtMap::AddAuxPad(const PadReference &ref, std::string auxName)
+bool AtMap::AddAuxPad(const AtPadReference &ref, std::string auxName)
 {
    auto emplacePair = fAuxPadMap.emplace(ref, auxName);
-   std::cout << cGREEN << " Auxiliary channel added " << fAuxPadMap[ref] << " - Hash " << std::hash<PadReference>()(ref)
-             << cNORMAL << "\n";
+   std::cout << cGREEN << " Auxiliary channel added " << fAuxPadMap[ref] << " - Hash "
+             << std::hash<AtPadReference>()(ref) << cNORMAL << "\n";
 
    return emplacePair.second;
 }
-bool AtMap::IsAuxPad(const PadReference &ref) const
+bool AtMap::IsAuxPad(const AtPadReference &ref) const
 {
    return fAuxPadMap.find(ref) != fAuxPadMap.end();
 }
-std::string AtMap::GetAuxName(const PadReference &ref) const
+std::string AtMap::GetAuxName(const AtPadReference &ref) const
 {
    if (IsAuxPad(ref))
       return fAuxPadMap.find(ref)->second;
    else
       return "";
 }
-PadReference AtMap::GetPadRef(int padNum) const
+AtPadReference AtMap::GetPadRef(int padNum) const
 {
-   if (AtTPCPadMapInverse.find(padNum) == AtTPCPadMapInverse.end())
-      return PadReference();
-   return AtTPCPadMapInverse.at(padNum);
+   if (fPadMapInverse.find(padNum) == fPadMapInverse.end())
+      return {};
+   return fPadMapInverse.at(padNum);
 }
 
-bool operator<(const PadReference &l, const PadReference &r)
+void AtMap::drawPadPlane()
 {
-   return std::hash<PadReference>()(l) < std::hash<PadReference>()(r);
-}
-
-bool operator==(const PadReference &l, const PadReference &r)
-{
-   return l.cobo == r.cobo && l.asad == r.asad && l.aget == r.aget && l.ch == r.ch;
+   // NOLINTNEXTLINE (memory belongs t root)
+   fPadPlaneCanvas = new TCanvas("padPlaneCanvas", "Pad Plane", 1000, 1000);
+   gStyle->SetPalette(1);
+   fPadPlane->Draw("col");
 }
 
 ClassImp(AtMap)

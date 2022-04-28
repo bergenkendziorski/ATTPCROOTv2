@@ -3,10 +3,17 @@
 
 #include "AtPSA.h"
 
+#include <Rtypes.h> // for THashConsistencyHolder, ClassDefOverride
+class AtEvent;
+class AtRawEvent;
+class TBuffer;
+class TClass;
+class TMemberInspector;
+
 class AtPSAProtoFull : public AtPSA {
 public:
-   AtPSAProtoFull();
-   ~AtPSAProtoFull();
+   AtPSAProtoFull() = default;
+   ~AtPSAProtoFull() = default;
 
    void Analyze(AtRawEvent *rawEvent, AtEvent *event) override;
 

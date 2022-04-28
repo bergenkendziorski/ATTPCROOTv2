@@ -1,27 +1,25 @@
 #include "AtLinkDAQTask.h"
 
-#include "TClonesArray.h"
-#include "TChain.h"
-#include "TFile.h"
-#include "TGraph.h"
+#include "AtRawEvent.h"
+#include "AtRunAna.h"
+
+#include <FairLogger.h>
+#include <FairRootManager.h>
+#include <FairRunAna.h>
+#include <FairTask.h>
+
+#include <TChain.h>
+#include <TClonesArray.h>
+#include <TFile.h>
+#include <TGraph.h>
+#include <TMathBase.h>
+#include <TObject.h>
 
 #include "HTTimestamp.h"
 
-#include "FairRootManager.h"
-
-#include "AtRunAna.h"
-#include "AtRawEvent.h"
-
-AtLinkDAQTask::AtLinkDAQTask()
-   : fInputBranchName("AtRawEvent"), fSearchMean(0), fSearchRadius(0), fOldTpcTimestamp(0), fOldEvtTimestamp(0),
-     kPersistent(kFALSE), fEvtOutputFileName(""), fEvtTreeIndex(0), kFirstEvent(kTRUE), evtTree(nullptr),
-     fDifferenceOffset(0)
-{
-   // Initialize pointers for reading and writing trees
-   fEvtTS = new HTTimestamp();
-}
-
-AtLinkDAQTask::~AtLinkDAQTask() {}
+#include <algorithm>
+#include <iostream>
+#include <memory>
 
 bool AtLinkDAQTask::SetInputTree(TString fileName, TString treeName)
 {
@@ -31,7 +29,7 @@ bool AtLinkDAQTask::SetInputTree(TString fileName, TString treeName)
       return false;
    }
    // Add the tree to the input
-   evtTree = new TChain(treeName);
+   evtTree = std::make_unique<TChain>(treeName);
 
    // If there is a tree with the correct name in the file
    return AddInputTree(fileName);
@@ -50,19 +48,19 @@ bool AtLinkDAQTask::AddInputTree(TString fileName)
 
 InitStatus AtLinkDAQTask::Init()
 {
-   AtRunAna *run = dynamic_cast<AtRunAna *>(FairRunAna::Instance());
+   auto *run = dynamic_cast<AtRunAna *>(FairRunAna::Instance());
    if (run == nullptr)
       LOG(fatal) << "Run must be of type AtRunAna or a derived type!";
 
    // Register the input and output branches with the IO manager
    FairRootManager *ioMan = FairRootManager::Instance();
-   if (ioMan == 0) {
+   if (ioMan == nullptr) {
       LOG(ERROR) << "Cannot find RootManager!";
       return kERROR;
    }
 
-   fInputEventArray = (TClonesArray *)ioMan->GetObject(fInputBranchName);
-   if (fInputEventArray == 0) {
+   fInputEventArray = dynamic_cast<TClonesArray *>(ioMan->GetObject(fInputBranchName));
+   if (fInputEventArray == nullptr) {
       LOG(ERROR) << "Cannot find AtRawEvent array in branch " << fInputBranchName << "!";
       return kERROR;
    }
@@ -72,11 +70,11 @@ InitStatus AtLinkDAQTask::Init()
       LOG(error) << "HiRAEVT tree was never initialized!";
       return kERROR;
    }
-   std::cout << "EVT address: " << evtTree << std::endl;
+   std::cout << "EVT address: " << evtTree.get() << std::endl;
    evtTree->SetBranchAddress(fEvtTimestampName, &fEvtTS);
 
    // Create the clone of the HiRA tree in the new file
-   fEvtOutputFile = new TFile(fEvtOutputFileName, "RECREATE");
+   fEvtOutputFile = new TFile(fEvtOutputFileName, "RECREATE"); // NOLINT (owned by ROOT)
    if (fEvtOutputFile->IsZombie()) {
       LOG(fatal) << "Failed to open output file: " << fEvtOutputFileName;
       return kERROR;
@@ -91,7 +89,7 @@ void AtLinkDAQTask::DoFirstEvent()
 {
    evtTree->GetEntry(0);
    fEvtTimestamp = fEvtTS->GetTimestamp();
-   fTpcTimestamp = *(fRawEvent->GetTimestamps());
+   fTpcTimestamp = fRawEvent->GetTimestamps();
 
    LOG(info) << "Initial timestamps: " << fTpcTimestamp.at(fTpcTimestampIndex) << " " << fEvtTimestamp;
    kFirstEvent = false;
@@ -101,10 +99,10 @@ void AtLinkDAQTask::DoFirstEvent()
 
    // Get the number of timestamps in the the AtRawEvent
    // And create the graphs to plot
-   auto numTimestamps = fRawEvent->GetTimestamps()->size();
+   auto numTimestamps = fRawEvent->GetTimestamps().size();
    for (int i = 0; i < numTimestamps; ++i) {
-      fGrDataRatio.push_back({});
-      fGrDataAbs.push_back({});
+      fGrDataRatio.emplace_back();
+      fGrDataAbs.emplace_back();
    }
 }
 
@@ -116,12 +114,12 @@ void AtLinkDAQTask::UpdateTimestamps()
    fOldEvtTimestamp = fEvtTimestamp;
    fOldTpcTimestamp = fTpcTimestamp;
    fEvtTimestamp = fEvtTS->GetTimestamp();
-   fTpcTimestamp = *(fRawEvent->GetTimestamps());
+   fTpcTimestamp = fRawEvent->GetTimestamps();
 }
 
 void AtLinkDAQTask::ResetFlags()
 {
-   AtRunAna *run = dynamic_cast<AtRunAna *>(FairRunAna::Instance());
+   auto *run = dynamic_cast<AtRunAna *>(FairRunAna::Instance());
    kFillEvt = run->GetMarkFill();
    kCorruptedTimestamp = false;
 }
@@ -234,7 +232,7 @@ void AtLinkDAQTask::Exec(Option_t *opt)
       // we can match the event interval,
       auto currentIndex = fEvtTreeIndex;
       auto maxIndex = currentIndex + 3;
-      auto currentTS = fEvtTimestamp;
+      // auto currentTS = fEvtTimestamp;
       if (maxIndex > evtTree->GetEntries())
          maxIndex = evtTree->GetEntries();
 
@@ -299,8 +297,8 @@ void AtLinkDAQTask::Finish()
 
    for (int index = 0; index < fGrDataRatio.size(); ++index) {
       fEvtOutputFile->cd();
-      TGraph *gr = new TGraph(fGrDataRatio[index].size());
-      TGraph *gr2 = new TGraph(fGrDataAbs[index].size());
+      auto gr = std::make_unique<TGraph>(fGrDataRatio[index].size());
+      auto gr2 = std::make_unique<TGraph>(fGrDataAbs[index].size());
       gr->SetTitle(TString::Format("Relative intercal difference. TS_%d", index));
       gr2->SetTitle(TString::Format("Abs interval difference. TS_%d", index));
 

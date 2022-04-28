@@ -3,6 +3,13 @@
 
 #include "AtFilter.h"
 
+#include <Rtypes.h>
+
+#include <vector>
+
+class AtPad;
+class AtRawEvent;
+
 class AtTrapezoidFilter : public AtFilter {
 
 private:

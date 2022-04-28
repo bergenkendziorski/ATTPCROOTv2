@@ -1,24 +1,24 @@
 // This class header
 #include "AtGas.h"
 
-// ROOT class headers
-#include "TRandom.h"
-
-// C/C++ class headers
-#include <stdio.h>
-#include <string.h>
 #include <cstdlib>
-#include <cstring>
-#include <fstream>
-#include <sstream>
+#include <fstream> // IWYU pragma: keep
 #include <iostream>
+#include <sstream> // IWYU pragma: keep
+#include <string>
+#include <utility>
+
+// ROOT class headers
+#include <Rtypes.h>
+#include <TRandom.h>
+#include <TString.h>
 
 using namespace std;
 
 ClassImp(AtGas)
 
    AtGas::AtGas(TString GasFileName)
-   : fGasFileName(GasFileName)
+   : fGasFileName(std::move(GasFileName))
 {
    InitializeParameters();
 }
@@ -57,8 +57,6 @@ void AtGas::InitializeParameters()
    }
 }
 
-AtGas::~AtGas() {}
-
 void AtGas::operator=(const AtGas &GasToCopy)
 {
    fEIonize = GasToCopy.fEIonize;
@@ -95,7 +93,7 @@ Int_t AtGas::GetGain()
 }
 UInt_t AtGas::GetRandomCS()
 {
-   UInt_t CS = (UInt_t)(gRandom->Gaus(50, 20));
+   auto CS = (UInt_t)(gRandom->Gaus(50, 20));
    if (CS <= 0)
       CS = 1;
    return CS;

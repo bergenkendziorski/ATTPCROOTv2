@@ -1,48 +1,43 @@
 #include "AtPSAFull.h"
 
-// FairRoot classes
-#include "FairRuntimeDb.h"
-#include "FairRun.h"
-
 // AtTPCROOT classes
-#include "AtRawEvent.h"
 #include "AtEvent.h"
-#include "AtDigiPar.h"
-#include "AtCalibration.h"
 #include "AtHit.h"
+#include "AtRawEvent.h"
 
 // ROOT classes
-#include "TH1F.h"
-#include "TRotation.h"
-#include "TMatrixD.h"
-#include "TArrayD.h"
-#include "TSpectrum.h"
+#include <TRotation.h>
 
 // STL
-#include <algorithm>
-#include <cmath>
-#include <map>
+#include "AtPad.h" // for AtPad
 
+#include <FairLogger.h> // for LOG
+
+#include <Math/Point2D.h> // for PositionVector2D
+#include <TMath.h>        // for Pi
+#include <TVector3.h>     // for TVector3
+
+#include <array>    // for array
+#include <iostream> // for basic_ostream::operator<<, operator<<
+#include <map>
+#include <memory>  // for allocator_traits<>::value_type
+#include <utility> // for pair
+
+/*
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-AtPSAFull::AtPSAFull()
-{
-   // fPeakFinder = new TSpectrum();
-}
-
-AtPSAFull::~AtPSAFull() {}
+*/
 
 void AtPSAFull::Analyze(AtRawEvent *rawEvent, AtEvent *event)
 {
    Int_t numPads = rawEvent->GetNumPads();
-   Int_t hitNum = 0;
    std::map<Int_t, Int_t> PadMultiplicity;
    Float_t mesh[512] = {0};
 
    for (auto iPad = 0; iPad < numPads; iPad++) {
-      AtPad *pad = &(rawEvent->GetPads().at(iPad));
+
+      const AtPad *pad = rawEvent->GetPads().at(iPad).get();
       Int_t PadNum = pad->GetPadNum();
       Int_t PadHitNum = 0;
       TVector3 HitPos;
@@ -65,7 +60,7 @@ void AtPSAFull::Analyze(AtRawEvent *rawEvent, AtEvent *event)
          // return;
       }
 
-      Double_t *adc = pad->GetADC();
+      auto adc = pad->GetADC();
       Double_t floatADC[512] = {0};
       Double_t dummy[512] = {0};
 
@@ -89,7 +84,7 @@ void AtPSAFull::Analyze(AtRawEvent *rawEvent, AtEvent *event)
       }
 
       Int_t size = 0;
-      maxAdcIdx = maxTime;
+      // maxAdcIdx = maxTime;
 
       for (Int_t iTb = 0; iTb < fNumTbs; iTb++) {
 
@@ -115,18 +110,16 @@ void AtPSAFull::Analyze(AtRawEvent *rawEvent, AtEvent *event)
 
       if (size < divider) {
          double zPos = CalculateZGeo(maxTime);
-         double xPos = pad->GetPadXCoord();
-         double yPos = pad->GetPadYCoord();
-         if ((xPos < -9000 || yPos < -9000) && pad->GetPadNum() != -1)
+         auto pos = pad->GetPadCoord();
+         if ((pos.X() < -9000 || pos.Y() < -9000) && pad->GetPadNum() != -1)
             std::cout << " AtPSAFull::Analysis Warning! Wrong Coordinates for Pad : " << pad->GetPadNum() << std::endl;
-         AtHit *hit = new AtHit(PadNum, hitNum, xPos, yPos, zPos, max);
-         hit->SetTimeStamp(maxTime);
-         event->AddHit(hit);
-         delete hit;
-         hitNum++;
-         PadMultiplicity.insert(std::pair<Int_t, Int_t>(PadNum, hitNum));
+
+         auto hit = event->AddHit(PadNum, XYZPoint(pos.X(), pos.Y(), zPos), charge);
+         hit.SetTimeStamp(maxTime);
+
+         PadMultiplicity.insert(std::pair<Int_t, Int_t>(PadNum, hit.GetHitID()));
       } else {
-         std::map<Int_t, Int_t>::iterator ite = interval.begin();
+         auto ite = interval.begin();
          // Double_t *thePar = new Double_t[3];
          while (ite != interval.end()) {
             final = (ite->second);
@@ -140,23 +133,19 @@ void AtPSAFull::Analyze(AtRawEvent *rawEvent, AtEvent *event)
                   endInterval = initial + ((points + 1) * divider) - 1;
 
                double zPos = CalculateZGeo(initInterval);
-               double xPos = pad->GetPadXCoord();
-               double yPos = pad->GetPadYCoord();
-               if ((xPos < -9000 || yPos < -9000) && pad->GetPadNum() != -1)
+               auto pos = pad->GetPadCoord();
+               if ((pos.X() < -9000 || pos.Y() < -9000) && pad->GetPadNum() != -1)
                   std::cout << " AtPSAFull::Analysis Warning! Wrong Coordinates for Pad : " << pad->GetPadNum()
                             << std::endl;
 
                for (Int_t iIn = initInterval; iIn < endInterval; iIn++)
                   charge += floatADC[iIn] / divider; // reduced by divider!!!
-               AtHit *hit = new AtHit(PadNum, hitNum, xPos, yPos, zPos, charge);
-               hit->SetTimeStamp(initInterval);
+
+               auto hit = event->AddHit(PadNum, XYZPoint(pos.X(), pos.Y(), zPos), charge);
+               hit.SetTimeStamp(initInterval);
                charge = 0;
 
-               event->AddHit(hit);
-               delete hit;
-               hitNum++;
-
-               PadMultiplicity.insert(std::pair<Int_t, Int_t>(PadNum, hitNum));
+               PadMultiplicity.insert(std::pair<Int_t, Int_t>(PadNum, hit.GetHitID()));
             }
             ite++;
          }

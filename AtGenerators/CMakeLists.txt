@@ -15,7 +15,7 @@ AtTPCIonPhaseSpace.cxx
 AtTPC2Body.cxx
 AtTPC_d2He.cxx
 AtTPC_Background.cxx
-AtEulerTransformation.cxx
+
 AtTPCFissionGenerator.cxx
 AtTPCFissionGeneratorV2.cxx
 AtTPCFissionGeneratorV3.cxx
@@ -24,33 +24,22 @@ AtTPCXSManager.cxx
 AtTPCGammaDummyGenerator.cxx
 AtTPC20MgDecay.cxx
 
-AtCSVReader.h
-)
-
-set(INCLUDE_DIRECTORIES
-${PYTHIA8_INCLUDE_DIR}
-${BASE_INCLUDE_DIRECTORIES}
 )
 
 set(DEPENDENCIES
-  Base
-  FairTools
+  FairRoot::Base
+  FairRoot::FairTools
   ROOT::Core
   ROOT::MathCore
   ROOT::GenVector
-  AtData
-  AtTpc
+
+  ATTPCROOT::AtSimulationData
+  ATTPCROOT::AtTools
   )
 
-set(LINK_DIRECTORIES
-${FAIRROOT_LIBRARY_DIR}
-)
-
-generate_target_root_library(${LIBRARY_NAME}
+generate_target_and_root_library(${LIBRARY_NAME}
   LINKDEF ${LINKDEF}
   SRCS ${SRCS}
-  INCLUDE_DIR ${INCLUDE_DIRECTORIES}
-  LIBRARY_DIR ${LINK_DIRECTORIES}
   DEPS_PUBLIC ${DEPENDENCIES}
   )
 

@@ -1,14 +1,21 @@
 #include "AtTriggerPar.h"
 
-ClassImp(AtTriggerPar)
+#include <FairLogger.h>
+#include <FairParGenericSet.h>
+#include <FairParamList.h>
 
-   AtTriggerPar::AtTriggerPar(const Char_t *name, const Char_t *title, const Char_t *context)
-   : FairParGenericSet("AtTriggerPar", "AtTPC Parameter Container", "")
+#include <TString.h>
+#include <TSystem.h>
+
+#include <fstream>
+#include <string>
+
+ClassImp(AtTriggerPar);
+
+AtTriggerPar::AtTriggerPar(const Char_t *name, const Char_t *title, const Char_t *context)
+   : FairParGenericSet("AtTriggerPar", "AtTPC Parameter Container", ""), fInitialized(kFALSE)
 {
-   fInitialized = kFALSE;
 }
-
-AtTriggerPar::~AtTriggerPar() {}
 
 // Getters
 
@@ -137,7 +144,7 @@ TString AtTriggerPar::GetFile(Int_t fileNum)
       throw;
    }
 
-   Char_t buffer[256];
+   std::string buffer;
    for (Int_t iFileNum = 0; iFileNum < fileNum + 1; ++iFileNum) {
       if (fileList.eof()) {
          LOG(fatal) << Form("Did not find string #%d in file %s.", fileNum, parFile.Data());
@@ -145,7 +152,7 @@ TString AtTriggerPar::GetFile(Int_t fileNum)
          throw;
       }
 
-      fileList.getline(buffer, 256);
+      std::getline(fileList, buffer);
    }
 
    fileList.close();

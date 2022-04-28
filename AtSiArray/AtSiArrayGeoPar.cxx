@@ -1,10 +1,9 @@
 #include "AtSiArrayGeoPar.h"
 
-#include "FairParamList.h"
+#include <FairParGenericSet.h>
+#include <FairParamList.h>
 
-#include "TObjArray.h"
-
-#include <iostream>
+#include <TObjArray.h>
 
 ClassImp(AtSiArrayGeoPar)
 
@@ -13,9 +12,9 @@ ClassImp(AtSiArrayGeoPar)
 {
 }
 
-AtSiArrayGeoPar::~AtSiArrayGeoPar(void) {}
+AtSiArrayGeoPar::~AtSiArrayGeoPar() = default;
 
-void AtSiArrayGeoPar::clear(void)
+void AtSiArrayGeoPar::clear()
 {
    if (fGeoSensNodes) {
       delete fGeoSensNodes;

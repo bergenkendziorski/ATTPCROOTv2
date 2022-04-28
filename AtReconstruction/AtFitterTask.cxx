@@ -1,63 +1,41 @@
 #include "AtFitterTask.h"
 
-// AtTPCROOT classes
-#include "AtEvent.h"
+#include <FairLogger.h>
+#include <FairTask.h>
+
+#include <TClonesArray.h>
+#include <TObject.h>
+// STL
 #include "AtPatternEvent.h"
 #include "AtTrack.h"
 
-// FAIRROOT classes
-#include "FairRootManager.h"
-#include "FairRun.h"
-#include "FairRuntimeDb.h"
-
-// GENFIT2 classes
-#include "Track.h"
-#include "TrackCand.h"
-#include "RKTrackRep.h"
-#include "Exception.h"
-
-// STL
+#include <algorithm>
 #include <iostream>
+// FAIRROOT classes
+#include <FairRootManager.h>
+#include <FairRun.h>
+#include <FairRuntimeDb.h>
+// GENFIT2 classes
+#include "AtDigiPar.h"
+#include "AtFitter.h"
+#include "AtGenfit.h"
 
-// ROOT classes
-#include "TMatrixDSym.h"
-#include "TMatrixD.h"
-#include "TMath.h"
-#include "TGeoManager.h"
-#include "Math/DistFunc.h"
+#include <Track.h>
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
 
 ClassImp(AtFitterTask);
 
 AtFitterTask::AtFitterTask()
+   : fLogger(FairLogger::GetLogger()), fIsPersistence(kFALSE), fPatternEventArray(new TClonesArray("ATPatternEvent")),
+     fGenfitTrackArray(new TClonesArray("genfit::Track")), fGenfitTrackVector(new std::vector<genfit::Track>())
 {
-   fLogger = FairLogger::GetLogger();
-   fPar = NULL;
-   fIsPersistence = kFALSE;
-   fPatternEventArray = new TClonesArray("ATPatternEvent");
-   fGenfitTrackArray = new TClonesArray("genfit::Track");
-   fFitterAlgorithm = 0;
-   fEventCnt = 0;
-   fGenfitTrackVector = new std::vector<genfit::Track>();
-
-   fMagneticField = 2.0;
-   fMinIterations = 5.0;
-   fMaxIterations = 20.0;
-   fPDGCode = 2212;
-   fMass = 1.00727646;
-   fAtomicNumber = 1;
-   fNumFitPoints = 0.90;
-   fMaxBrho = 3.0;  // Tm
-   fMinBrho = 0.01; // Tm
-
-   fELossFile = "";
 }
 
-AtFitterTask::~AtFitterTask() {}
+AtFitterTask::~AtFitterTask() = default;
 
 void AtFitterTask::SetPersistence(Bool_t value)
 {
@@ -67,13 +45,13 @@ void AtFitterTask::SetPersistence(Bool_t value)
 InitStatus AtFitterTask::Init()
 {
    FairRootManager *ioMan = FairRootManager::Instance();
-   if (ioMan == 0) {
+   if (ioMan == nullptr) {
       LOG(error) << "Cannot find RootManager!";
       return kERROR;
    }
 
-   fPatternEventArray = (TClonesArray *)ioMan->GetObject("AtPatternEvent");
-   if (fPatternEventArray == 0) {
+   fPatternEventArray = dynamic_cast<TClonesArray *>(ioMan->GetObject("AtPatternEvent"));
+   if (fPatternEventArray == nullptr) {
       LOG(error) << "Cannot find AtPatternEvent array!";
       return kERROR;
    }
@@ -124,11 +102,11 @@ void AtFitterTask::SetParContainers()
    if (!run)
       LOG(fatal) << "No analysis run!";
 
-   FairRuntimeDb *db = run->GetRuntimeDb();
+   FairRuntimeDb *db = run->GetRuntimeDb(); // NOLINT
    if (!db)
       LOG(fatal) << "No runtime database!";
 
-   fPar = (AtDigiPar *)db->getContainer("AtDigiPar");
+   fPar = (AtDigiPar *)db->getContainer("AtDigiPar"); // NOLINT
    if (!fPar)
       LOG(fatal) << "AtDigiPar not found!!";
 }
@@ -145,7 +123,7 @@ void AtFitterTask::Exec(Option_t *option)
 
    std::cout << " Event Counter " << fEventCnt << "\n";
 
-   AtPatternEvent &patternEvent = *((AtPatternEvent *)fPatternEventArray->At(0));
+   AtPatternEvent &patternEvent = *(dynamic_cast<AtPatternEvent *>(fPatternEventArray->At(0)));
    std::vector<AtTrack> &patternTrackCand = patternEvent.GetTrackCand();
    std::cout << " AtFitterTask:Exec -  Number of candidate tracks : " << patternTrackCand.size() << "\n";
 

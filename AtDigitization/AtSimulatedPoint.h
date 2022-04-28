@@ -1,9 +1,17 @@
 #ifndef AtSIMULAtEDPOINT_H
 #define AtSIMULAtEDPOINT_H
 
-//#include "TROOT.h"
-#include "TObject.h"
-#include "Math/Vector3D.h"
+#include <Math/Vector3D.h>
+#include <Math/Vector3Dfwd.h>
+#include <Rtypes.h>
+//#include <TROOT.h>
+#include <TObject.h>
+
+#include <cstddef>
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtSimulatedPoint : public TObject {
 
@@ -12,14 +20,14 @@ protected:
    std::size_t fMCPointID;
    std::size_t fMCEventID;
    Int_t fClusterID;
-   Int_t fCharge;
+   Int_t fCharge{};
 
    ROOT::Math::XYZVector fPosition; //(mm,mm,us)
 
 public:
    AtSimulatedPoint();
-   AtSimulatedPoint(std::size_t mcPointID, Int_t clusterID, const ROOT::Math::XYZVector &pointLocation);
-   AtSimulatedPoint(std::size_t mcPointID, Int_t clusterID, Int_t charge, const ROOT::Math::XYZVector &pointLocation);
+   AtSimulatedPoint(std::size_t mcPointID, Int_t clusterID, ROOT::Math::XYZVector pointLocation);
+   AtSimulatedPoint(std::size_t mcPointID, Int_t clusterID, Int_t charge, ROOT::Math::XYZVector pointLocation);
 
    ~AtSimulatedPoint();
 

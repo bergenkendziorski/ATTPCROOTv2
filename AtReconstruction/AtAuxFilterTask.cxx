@@ -1,18 +1,28 @@
 #include "AtAuxFilterTask.h"
 
-// FairRoot Classes
-#include "FairLogger.h"
+#include <FairLogger.h>
+#include <FairRootManager.h>
+#include <FairTask.h>
+
+#include <TString.h>
+
+#include <algorithm>
+#include <ostream>
+#include <utility>
 
 // Root Classes
 #include "AtFilter.h"
 #include "AtRawEvent.h"
-
 // AtTPCRoot Classes
-#include "TClonesArray.h"
+#include "AtAuxPad.h"
+#include "AtPad.h"
+
+#include <TClonesArray.h>
+#include <TObject.h> // for TObject
 
 AtAuxFilterTask::AtAuxFilterTask(AtFilter *filter) : fFilter(filter), fInputEventBranchName("AtRawEvent") {}
 
-AtAuxFilterTask::~AtAuxFilterTask() {}
+AtAuxFilterTask::~AtAuxFilterTask() = default;
 
 void AtAuxFilterTask::AddAuxPad(std::string pad)
 {
@@ -34,7 +44,7 @@ InitStatus AtAuxFilterTask::Init()
    }
 
    // Get the old data from the io manager
-   fInputEventArray = (TClonesArray *)ioManager->GetObject(fInputEventBranchName);
+   fInputEventArray = dynamic_cast<TClonesArray *>(ioManager->GetObject(fInputEventBranchName));
    if (fInputEventArray == nullptr) {
       LOG(ERROR) << "AtAuxFilterTask: Cannot find AtRawEvent array " << fInputEventBranchName;
       return kERROR;
@@ -50,7 +60,7 @@ void AtAuxFilterTask::Exec(Option_t *opt)
    if (fInputEventArray->GetEntriesFast() == 0)
       return;
 
-   AtRawEvent *rawEvent = (AtRawEvent *)fInputEventArray->At(0);
+   auto *rawEvent = dynamic_cast<AtRawEvent *>(fInputEventArray->At(0));
    if (!rawEvent->IsGood())
       return;
 
@@ -65,7 +75,7 @@ void AtAuxFilterTask::Exec(Option_t *opt)
 
       auto itPair = rawEvent->AddAuxPad(auxName + "Filtered");
 
-      auto pad = &(itPair.first->second);
+      auto pad = itPair.first;
       pad->SetRawADC(unfilteredPad->GetRawADC());
       if (unfilteredPad->IsPedestalSubtracted()) {
          pad->SetADC(unfilteredPad->GetADC());

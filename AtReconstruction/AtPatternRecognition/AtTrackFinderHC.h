@@ -11,48 +11,27 @@
 #include <omp.h>
 #endif
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include "AtPRA.h"   // for AtPRA
+#include "AtTrack.h" // for AtTrack
 
-// System
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <stdlib.h>
-#include <stdio.h>
-#include <sstream>
-#include <vector>
-#include <future>
+#include <Rtypes.h> // for THashConsistencyHolder, ClassDef
 
-// AtTPCROOT
-#include "AtPRA.h"
-#include "AtHit.h"
-#include "AtEvent.h"
-#include "AtPatternEvent.h"
-#include "AtDigiPar.h"
-#include "AtTpcMap.h"
-#include "AtTrack.h"
-#include "TObject.h"
+#include <pcl/point_cloud.h> // for PointCloud, PointCloud<>::Ptr
+#include <pcl/point_types.h> // for PointXYZI
 
-// FairRoot classes
-#include "FairRootManager.h"
-#include "FairLogger.h"
+#include "cluster.h" // for Cluster
+#include <stdio.h>   // for size_t
 
-// PCL
-#include <pcl/common/common.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/io/pcd_io.h>
+#include <vector> // for vector
 
-// trackfinder
-#include "hc.h"
-#include "msd.h"
-#include "smoothenCloud.h"
-
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+class AtEvent;
+class AtPatternEvent;
+class TBuffer;
+class TClass;
+class TMemberInspector;
+namespace hc {
+struct triplet;
+}
 
 struct hc_params {
    float s;
@@ -71,7 +50,8 @@ struct Point {
    float z;
    std::vector<int> clIds;
 
-   Point(pcl::PointXYZ point)
+   template <typename T>
+   Point(T point)
    {
       x = point.x;
       y = point.y;
@@ -87,7 +67,7 @@ class AtTrackFinderHC : public AtPRA {
 
 public:
    AtTrackFinderHC();
-   ~AtTrackFinderHC();
+   ~AtTrackFinderHC() = default;
 
    bool FindTracks(AtEvent &event, AtPatternEvent *patternEvent);
    std::vector<AtTrack> GetTrackCand();
@@ -111,7 +91,7 @@ private:
 
    std::vector<AtTrack> fTrackCand; // Candidate tracks
 
-   hc_params inputParams;
+   hc_params inputParams{.s = -1, .k = 19, .n = 3, .m = 8, .r = -1, .a = 0.03, .t = 3.5};
 
    ClassDef(AtTrackFinderHC, 1);
 };

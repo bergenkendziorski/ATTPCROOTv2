@@ -1,15 +1,26 @@
 #include "AtTrigger.h"
 
+#include "AtEvent.h"
+#include "AtPad.h"
+#include "AtRawEvent.h"
+
+#include <Rtypes.h>
+#include <TMatrixDfwd.h>
+#include <TMatrixT.h>
+#include <TString.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstring>
+#include <iostream>
 #include <string>
-#include <sstream>
 
 ClassImp(AtTrigger)
 
-   AtTrigger::AtTrigger()
-{
-}
+   AtTrigger::AtTrigger() = default;
 
-AtTrigger::~AtTrigger() {}
+AtTrigger::~AtTrigger() = default;
 
 void AtTrigger::SetAtMap(TString mapPath)
 {
@@ -94,18 +105,17 @@ Bool_t AtTrigger::ImplementTrigger(AtRawEvent *rawEvent, AtEvent *event)
    TMatrixD result(10, 512);
 
    Int_t numHits = fEvent->GetNumHits();
-   Int_t numPads = fRawEvent->GetNumPads();
 
    // Loop over the NUMBER of SIGNALS in the EVENT
    for (Int_t iHit = 0; iHit < numHits; iHit++) {
-      fHit = fEvent->GetHitArray()->at(iHit);
-      Int_t PadNumHit = fHit.GetHitPadNum();
+      fHit = fEvent->GetHitArray().at(iHit);
+      Int_t PadNumHit = fHit.GetPadNum();
 
       fPad = fRawEvent->GetPad(PadNumHit);
       if (fPad == nullptr)
          continue;
 
-      fRawAdc = fPad->GetADC();
+      auto fRawAdc = fPad->GetADC();
       fPadNum = fPad->GetPadNum();
 
       //*************************************************************************************************

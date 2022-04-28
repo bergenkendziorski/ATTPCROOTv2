@@ -1,26 +1,32 @@
 #include "AtTrackFinderHC.h"
 
-// FairRoot classes
-#include "FairRuntimeDb.h"
-#include "FairRun.h"
+#include "AtEvent.h"        // for AtEvent
+#include "AtHit.h"          // for AtHit
+#include "AtPatternEvent.h" // for AtPatternEvent
 
-AtPATTERN::AtTrackFinderHC::AtTrackFinderHC()
-{
-   inputParams.s = -1.0;
-   inputParams.r = -1.0;
-   inputParams.k = 19;
-   inputParams.n = 3;
-   inputParams.a = 0.03;
-   inputParams.t = 3.5;
-   inputParams.m = 8;
-   kSetPrunning = kFALSE;
-   fKNN = 5;
-   fStdDevMulkNN = 0.0;
-   fkNNDist = 10.0;
-   kSetPrunning = kFALSE;
-}
+#include <Math/Point3D.h> // for PositionVector3D
 
-AtPATTERN::AtTrackFinderHC::~AtTrackFinderHC() {}
+#include <Eigen/Core>                     // for aligned_allocator
+#include <boost/core/checked_delete.hpp>  // for checked_delete
+#include <boost/smart_ptr/shared_ptr.hpp> // for shared_ptr
+#include <pcl/PointIndices.h>             // for PointIndicesPtr, PointIndices
+#include <pcl/common/io.h>                // for copyPointCloud
+
+#include "hc.h"            // for triplet, cleanupClusterGroup
+#include "msd.h"           // for first_quartile
+#include "smoothenCloud.h" // for smoothenCloud
+
+#include <algorithm>
+#include <cmath>    // for sqrt
+#include <iostream> // for cout, cerr
+#include <memory>   // for allocator_traits<>::value_...
+
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
+
+AtPATTERN::AtTrackFinderHC::AtTrackFinderHC() : AtPATTERN::AtPRA() {}
 
 std::vector<AtTrack> AtPATTERN::AtTrackFinderHC::GetTrackCand()
 {
@@ -32,7 +38,7 @@ bool AtPATTERN::AtTrackFinderHC::FindTracks(AtEvent &event, AtPatternEvent *patt
 
    int opt_verbose = 0;
 
-   hc_params opt_params;
+   hc_params opt_params{};
 
    // hc_params bestParams;
    // AtTPC
@@ -59,7 +65,7 @@ bool AtPATTERN::AtTrackFinderHC::FindTracks(AtEvent &event, AtPatternEvent *patt
    if (cloud_xyz->size() == 0) {
       std::cerr << "Error: empty cloud <<"
                    "\n";
-      return 0;
+      return false;
    }
 
    // compute default r if it is not given
@@ -124,9 +130,8 @@ void AtPATTERN::AtTrackFinderHC::eventToClusters(AtEvent &event, pcl::PointCloud
 
    for (Int_t iHit = 0; iHit < nHits; iHit++) {
 
-      AtHit *hit = event.GetHit(iHit);
-      Int_t PadNumHit = hit->GetHitPadNum();
-      TVector3 position = hit->GetPosition();
+      const AtHit hit = event.GetHit(iHit);
+      auto position = hit.GetPosition();
       cloud->points[iHit].x = position.X();
       cloud->points[iHit].y = position.Y();
       cloud->points[iHit].z = position.Z();
@@ -151,16 +156,13 @@ std::vector<AtTrack> AtPATTERN::AtTrackFinderHC::clustersToTrack(pcl::PointCloud
       pcl::PointIndicesPtr const &pointIndices = clusters[clusterIndex];
       // get color colour
 
-      for (size_t i = 0; i < pointIndices->indices.size(); ++i) {
-         int index = pointIndices->indices[i];
+      for (int index : pointIndices->indices) {
          pcl::PointXYZI point = cloud->points[index];
 
-         if (event.GetHit(point.intensity))
-            track.AddHit(event.GetHit(point.intensity));
+         track.AddHit(event.GetHit(point.intensity));
 
          // remove clustered points from point-vector
-         for (std::vector<pcl::PointXYZI, Eigen::aligned_allocator<pcl::PointXYZI>>::iterator it = points.end();
-              it != points.begin(); --it) {
+         for (auto it = points.end(); it != points.begin(); --it) {
             if (it->x == point.x && it->y == point.y && it->z == point.z) {
 
                if (it != points.end()) {
@@ -187,16 +189,14 @@ std::vector<AtTrack> AtPATTERN::AtTrackFinderHC::clustersToTrack(pcl::PointCloud
 
    // Dump noise into a track
    AtTrack ntrack;
-   for (std::vector<pcl::PointXYZI, Eigen::aligned_allocator<pcl::PointXYZI>>::iterator it = points.begin();
-        it != points.end(); ++it) {
-      if (event.GetHit(it->intensity))
-         ntrack.AddHit(event.GetHit(it->intensity));
+   for (auto &point : points) {
+      ntrack.AddHit(event.GetHit(point.intensity));
    }
    ntrack.SetIsNoise(kTRUE);
    tracks.push_back(ntrack);
 
    for (auto &track : tracks)
-      if (track.GetHitArray()->size() > 0)
+      if (track.GetHitArray().size() > 0)
          SetTrackInitialParameters(track);
 
    /*ROOT::EnableThreadSafety();

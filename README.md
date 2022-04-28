@@ -1,12 +1,29 @@
-ATTPCROOT is a ROOT-based (root.cern.ch) framework to analyze data of the ATTPC detector (Active Target Time Projection Chamber) and the p-ATTPC (Prototype). For reference http://ribf.riken.jp/ARIS2014/slide/files/Jun2/Par2B06Bazin-final.pdf. The detector is based at the NSCL but experiments are performed at other facilities as well (Notre Dame, TRIUMF, Argonne...).
+ATTPCROOT is a ROOT-based (root.cern.ch) framework to analyze data of active target detectors including the ATTPC (Active Target Time Projection Chamber) detector and the p-ATTPC (Prototype). For reference http://ribf.riken.jp/ARIS2014/slide/files/Jun2/Par2B06Bazin-final.pdf. The detector is based at the NSCL but experiments are performed at other facilities as well (Notre Dame, TRIUMF, Argonne...).
  
 The framework allows the end user to unpack and analyze the data, as well as perform realistic simulations based on a Virtual Monte Carlo (VMC) package. The framework needs external libraries (FairSoft and FairRoot https://fairroot.gsi.de/) to be compiled and executed, which are developed by other groups and not directly supported by the AT-TPC group. Please refer to their forums for installation issues of these packages.
 
+Doxygen documentation for the most recent release can be found [here](http://attpc.github.io/ATTPCROOTv2/).
+Doxygen documentation tracking the develop branch can be found [here](https://anthoak13.github.io/ATTPCROOTv2/)
+
 There was also some documentation written as part of Alexander Carl's 2019 thesis which can be found [here](https://publications.nscl.msu.edu/thesis/%20Carls_2019_6009.pdf)
+
+# Table of contents
+
+- [For developers](#for-developers)
+  - [Coding conventions](#coding-conventions)
+    - [Object Ownership](#object-ownership)
+    - [Formatting code for PRs](#formatting-code-for-pull-requests)
+    - [Adding a class](#adding-a-class)
+    - [Adding a task](#adding-a-task)
+    - [Adding a library](#adding-a-library)
+- [Installation](#installation)
+  - [On NSCL/FRIB cluster](#installation-on-frib-cluster)
+  - [Building from scratch](#installation-from-scratch)
+  - [Linking against ATTPCROOT](#linking-against-attpcroot)
 
 # Installation
 
-## Installation on NSCL/FRIB cluster
+## Installation on FRIB cluster
 
 ROOT and FairROOT are already installed on the system. As of 1/14/2021 the IT department has decided they no longer want to maintain the installation, the the process has changed. The prequisites for installation can now bew found in the directory `/mnt/simulation/attpcroot/fair_install_18.6/`. It is recomended to use the `env_fishtank.sh` script to set the required modules and enviroment variables that used to be handled just through the fishtank module system.
 
@@ -19,13 +36,13 @@ source env_fishtank.sh
 mkdir build
 cd build
 cmake -DCMAKE_PREFIX_PATH=/mnt/simulations/attpcroot/fair_install_18.6/ ../
-make -j 4
-source config.sh -a
+make install -j 4 
+source config.sh
 ```
 
 After the source builds, you should be good to go. The CMake script will output a configuration file in the build directory called `config.sh`. This script should be sourced before building or running any macros. For those working on the FRIB fishtank computers, the enviroment script `env_fishtank.sh` can be sourced instead.
 
-## Installation on other systems
+## Installation from scratch
 
 The ATTPCROOT code depends on the following external packages, with tested version numbers:
 
@@ -35,14 +52,15 @@ The ATTPCROOT code depends on the following external packages, with tested versi
   - [FairSoft](https://github.com/FairRootGroup/FairSoft/releases/tag/apr21p2) (apr21 with ROOT fftw3 module)
   - [FairRoot](https://github.com/FairRootGroup/FairRoot/releases/tag/v18.6.5) (18.6.5)
   - [HDF5](https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.4/src/) (1.10.4)
-- Optional dependencies 
-  - [PCL](https://github.com/PointCloudLibrary/pcl/releases/tag/pcl-1.10.1) (1.10.1)
+    - [PCL](https://github.com/PointCloudLibrary/pcl/releases/tag/pcl-1.10.1) (1.10.1)
     - [FLANN](https://github.com/flann-lib/flann/releases/tag/1.9.1) (1.9.1)
     - [Eigen](https://gitlab.com/libeigen/eigen/-/releases/3.3.9) (3.3.9)
+
+- Optional dependencies 
   - [GenFit](https://github.com/Yassid/GenFit)
   - [HiRAEVT](https://github.com/nscl-hira/HiRAEVT)
+  - [IWYU](https://github.com/include-what-you-use/include-what-you-use) for static analysis
 
-Note: It was also tested with FairSoft may18, and FairRoot 18.0.8
 
 ### Installation of prequisites
 
@@ -138,34 +156,129 @@ cmake -DCMAKE_INSTALL_PREFIX=/mnt/simulations/attpcroot/fair_install_18.6/HiRAEV
 ```
 4. Build and install `make` and `make install`
 
+## Linking against ATTPCROOT
+ATTPCROOT can be included in an external project using CMake. When installed (`make install`) ATTPCROOT will export information on its targets (libraries) and dependencies for others to use. By default, the installation path is `build/install` but this can be changed by setting the `CMAKE_INSTALL_PREFIX` variable when building the ATTPCROOT code.
+
+The simplest use involves making sure the install directory sits on your project's `CMAKE_PREFIX_PATH` and using CMake's build in `find_package(ATTPCROOT)` command, and then adding the libraries required with `target_link_libraries()`. A minimally fuctioning CMakeLists.txt for an external project might look something like this:
+
+```
+list(APPEND CMAKE_PREFIX_PATH /path/to/ATTPCROOT/install/dir)
+
+find_package(ATTPCROOT REQUIRED)
+add_library(yourLib SHARED yourLib.cpp)
+target_link_libraries(yourLib PUBLIC ATTPCROOT::AtData)
+```
+This will build a shared library called `libyourLib.so` and link it against `libAtData.so` and all its dependencies.
+
 # For developers
+
+## Coding conventions
+
+Pull requests submitted should have the code formated in the [ROOT style](https://root.cern/contribute/coding_conventions/). Never include a header file when a forward decleration is sufficient. Only include header files for base classes or classes that are used by value in the class definition. The static analyzer IWYU helps with this, but will ocassionally get things wrong, so use your judgment.
+
+All data members of a class should be private or protected and begin with the letter `f`, followed by a capital letter. All public member functions should begin with a capital letter. Following ROOT's style guide, private data members should be declared first, followed by the private static members, the private methods and the private static methods. Then the protected members and methods, and finally the public methods. Add trivial get or setters directly in the class definition. Add more complex inlines (longer than one line) at the bottom of the .h file. 
+
+Avoid raw c types for anything that might be written to disk (any memeber variable), instead use ROOT defined types like `Int_t` defined in `<Rtypes.h>`. If any changes are made to the memory layout of a class, the version number in the ROOT macro `ClassDef` needs to be incremented. If the class overrides any virtual function, the macro `ClassDefOverride` should be used instead.
+
+An object should always be created in a valid state. Instance variables that are set to the same value in all constructors should be instantiated in the header file. Variables whose initial value can change depending on the constructor called, should be intialized in the constructor's braced-init-list. Prefer delegating constructors to repeating code.
+
+Header files refrencing this code base should be included using quotes i.e. `#include "header.h"`. Header files from dependencies should be included using angle brackets i.e. `#include <Rtypes.h>`. This is the syntax assumed by the custom mapping file we use for running IWYU and will lead to false errors running the linter if deviated from. 
+
+### Object ownership
+
+When we talk about object ownership we mean the right to free the associated resources (in otherwords `delete` an object). ROOT has some weird quirks of ownership, where you may not own the things you think you do. This is particularly true of histograms, TTrees, and TEventLists. Details of ROOT ownership practices can be found [here](https://root.cern.ch/root/htmldoc/guides/users-guide/ObjectOwnership.html). For everything not discussed here we use the following conventions (modified from the [C++ Core Guidlines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#S-resource):
+
+* Express ownership explicitly through use of smart pointers `std::unique_ptr` and `std::shared_ptr`. This means there should never be an explicit call to `new` or `delete`. The exception to this is ROOT cannot yet create streamer for writing `std::shared_ptr` to disk. In that case, a raw pointer (`T*`) with a comment explaining the intended ownership is acceptible until ROOT fixes that problem.
+* Prefer `std::unique_ptr` over `std::shared_ptr` unless ownership must be shared.
+* Raw pointers (`T*`) and raw references are non-owning (`T&`). They should never be deleted. 
+* Take smart pointers as parameters only to express lifetime semantics (transfer ownership)
+* In interfaces (headers), use raw pointers to denote individual objects. Arrays should be represented by a containter (unless it is c-style string).
 
 ### Formatting code for pull requests
 
-Pull requests submitted should have the code formated in the [ROOT style](https://root.cern/contribute/coding_conventions/). Never include a header file when a forward decleration is sufficient. Only include header files for base classes or classes that are used by value in the class definition.
-
 Before submitting a pull request, reformat the code using `clang-format`. If run from within the repository it will pick up the `.clang-format` file detail the style. This file is also reproduced on the page detailing ROOT the ROOT coding style. If for some reason you need a section of code to not be formatted, you can turn off formatting using comment flags. Formatting of code is turned off with the comment `// clang-format off` and re-enabled with the comment `// clang-format on`. This process can be simplified using the command `git-clang-format` which when given no options will tun `clang-format` on all lines of code that differ between the working directory and HEAD. Detailed documentation is [here](https://github.com/llvm-mirror/clang/blob/master/tools/clang-format/git-clang-format).
 
-All data members of a class should be private or protected and begin with the letter `f`, followed by a capital letter. All public member functions should begin with a capital letter. Private data members should be declared first, followed by the private static members, the private methods and the private static methods. Then the protected members and methods and finally the public methods. 
+Before submitting a pull request run the tests as described [below](#running-tests).
 
-Avoid raw c types for anything that might be written to disk (any memeber variable), instead use ROOT defined types like `Int_t` defined in `Rtypes.h`. If any changes are made to the memory layout of a class, the version number in the ROOT macro `ClassDef` needs to be incremented. If the class overrides any virtual function, the macro `ClassDefOverride` should be used instead.
+## Adding a class
 
-### Adding a class
-
-Classes, for example a new generator, can be added by created the header and source files. In that directory the `CMakeLists.txt` file must be edited to add any include directories needed as well as add the source file so the make file knows to compile it. In addition the class should be added the the local `GenLinkDef.h` file, if needed. In addition, a symbolic link should be created to the new header in the `include` directory. Classes should respect the naming convention of `AtName.cxx` for source, and `AtName.h` for headers. The FairRoot macro used to generate the ROOT dictionaries for each library, assumes these file extensions.
+Classes, for example a new generator, can be added by creating the header and source files. In the library directory the `CMakeLists.txt` file must be edited to add any include directories needed as well as add the source file so CMake knows to compile it. In addition the class should be added the the local `LinkDef.h` file, if needed. Classes should respect the naming convention of `AtName.cxx` for source, and `AtName.h` for headers or the build system might fail. The macros used to generate the ROOT dictionaries for each library, assumes these file extensions.
 
 In general, any class added or modified should try to respect backwards compatibilty. In addition, it should avoid modifying important base classes unless there is a good reason. That is, if you're adding a feature only used in a certain experiment to a certain class you should extend that class rather then modify it.
 
-### Adding a task
+## Adding a task
 
-Each task class (something that inherits from FairTask) should be primarily responsible for setting up the input and output. The logic of the task should be handled by another class, an instance of which is a member of the task class. When adding new features or options to a task the base logic class should be extended rather then modified.
+Each task class (something that inherits from FairTask) should be primarily responsible for setting up the input and output. The logic of the task should be handled by another class, an instance of which is a member of the task class. The goal here is to seperate the IO from the actualy loogic of the task. This makes it easier for someone linking against ATTPCROOT to use the logic without spinning up an entire instance of FairRoot. 
 
-### Adding a library
+## Adding a library
 
 Each folder in the root directory names `AtName` will build into a shared object with the name `libAtName` as defined by a `CMakelists.txt` file in each folder. Other folders, (eg macro, icon, parameters, etc), are not built and do not contain a CMakeLists.txt folder. In order for the new library to be built, it must be added as a subdirectory to the global CMakeList.txt in the root directory.
 
+## Running tests
 
+There is a suite of tests located in `macro/tests` to check the unpacking of AT-TPC, SpecMAT, and GADGET data. It also tests the simulation of AT-TPC data. To run the tests, the following pre-requites must be met:
 
+* Generate the required geometry files by running the script `macro/tests/generateGeometry.sh`
+* GADGETII tests must be run on fishtank (the data is to large to package with the repository)
+* SpecMAT tests require the ROOT file TTreesGETrun_9993.root be placed in the `macro/tests/SpecMAT/data` folder.
+
+To run all tests run the bash script `macro/tests/runAllTest.sh`. To the screen it will print a summary of each test run and the return value. The output of the test scripts run are saved in a text file in each test directory (test.log).
+
+### Coverage of tests
+
+- [ ] Simulation Coverage
+  * Generators
+    - [ ] AtTPC20MgDecay
+	- [ ] AtTPC2Body
+	- [ ] AtTPC_Background
+	- [ ] AtTPC_d2He
+	- [ ] AtTPCFissionGenerator
+	- [ ] AtTPCFissionGeneratorv2
+	- [x] AtTPCFissionGeneratorv3
+	- [ ] AtTPCGammaDummyGenerator
+	- [ ] AtTPCIonDecay
+	- [x] AtTPCIonGenerator
+	- [ ] AtTPCXSManager
+	- [ ] AtTPCXSReader
+  - [ ] AtAvalanchTask
+  - [x] AtClusterizeLineTask
+  - [ ] AtClusterizeTask
+  - [x] AtPulseLineTask
+  - [ ] AtPulseTask
+  - [ ] AtSpaceChargeTask
+  - [ ] AtTriggerTask
+- [x] Unpacking Coverage
+  - [x] AtUnpackTask
+    - [x] AtHDFUnpacker
+    - [x] AtROOTUnpacker
+    - [x] AtGRAWUnpacker
+- [ ] Reconstruction Coverage
+  - [ ] AtAuxFilterTask
+  - [x] AtDataReductionTask
+  - [x] AtFilterTask
+    - [x] AtFilterSubtraction
+	- [ ] AtFilterCalibrate
+	- [ ] AtTrapezoidFilter
+  - [ ] AtFitterTask
+  - [ ] AtLinkDAQtask
+  - [ ] AtPRAtask 
+    - [ ] AtLmedsMod
+	- [ ] AtMlesacMod
+	- [ ] AtPRA
+    - [ ] AtRansacMod
+	- [ ] AtTrackFinderHC
+  - [x] AtPSAtask
+    - [ ] AtCalibration
+	- [ ] AtPSAFilter
+	- [ ] AtPSAFull
+	- [ ] AtPSAProto
+	- [ ] AtPSAProtoFull
+    - [x] AtPSASimple2
+	- [ ] AtPSASimple
+  - [x] AtRansacTask
+    - [x] AtRansac
+  - [ ] AtTrackFinderHCTask
+  
 # Creating geometry files
 
 ### Adding materials

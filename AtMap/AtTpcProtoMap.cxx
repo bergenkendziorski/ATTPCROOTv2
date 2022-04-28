@@ -6,40 +6,39 @@
  *********************************************************************/
 
 #include "AtTpcProtoMap.h"
-#include "TCanvas.h"
-#include "TKey.h"
-#include "TMultiGraph.h"
-#include "TStyle.h"
 
-#include <iostream>
+#include <Math/Point2D.h>
+#include <Rtypes.h>
+#include <TCollection.h>
+#include <TDirectory.h>
+#include <TFile.h>
+#include <TH2Poly.h>
+#include <TKey.h>
+#include <TMultiGraph.h>
+#include <TObject.h>
+
+#include <cstdlib>
 #include <fstream>
+#include <iostream>
+#include <memory>
+#include <utility>
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
+using XYPoint = ROOT::Math::XYPoint;
 
-ClassImp(AtTpcProtoMap)
+ClassImp(AtTpcProtoMap);
 
-   AtTpcProtoMap::AtTpcProtoMap()
-{
-
-   kIsFileSet = kFALSE;
-   kIsGenerated = kFALSE;
-   kIsProtoMapSet = kFALSE;
-   hProto = new TH2Poly();
-   hProto->SetName("ATTPC_Proto");
-   hProto->SetTitle("ATTPC_Proto");
-}
-
-AtTpcProtoMap::~AtTpcProtoMap() {}
+AtTpcProtoMap::AtTpcProtoMap() : AtMap() {}
 
 Bool_t AtTpcProtoMap::SetGeoFile(TString geofile)
 {
 
    TString dir = getenv("VMCWORKDIR");
    TString geodir = dir + "/geometry/" + geofile;
-   f = new TFile(geodir.Data());
+   f = new TFile(geodir.Data()); // NOLINT
 
    if (f->IsZombie()) {
       std::cout << cRED << " AtTPC Proto Map : No geometry file found! Check VMCWORKDIR variable. Exiting... "
@@ -52,7 +51,7 @@ Bool_t AtTpcProtoMap::SetGeoFile(TString geofile)
    return kTRUE;
 }
 
-void AtTpcProtoMap::GenerateAtTpc()
+void AtTpcProtoMap::GeneratePadPlane()
 {
 
    if (f->IsZombie()) {
@@ -63,14 +62,14 @@ void AtTpcProtoMap::GenerateAtTpc()
    }
 
    std::cout << " AtTPC Proto Map : Generating the map geometry of the AtTPC Prototype " << std::endl;
-   TMultiGraph *mg;
-   TKey *key;
+   TMultiGraph *mg = nullptr;
+   TKey *key = nullptr;
    TIter nextkey(gDirectory->GetListOfKeys());
-   while (key = (TKey *)nextkey()) {
-      TMultiGraph *obj = (TMultiGraph *)key->ReadObj();
+   while ((key = dynamic_cast<TKey *>(nextkey()))) {
+      auto *obj = dynamic_cast<TMultiGraph *>(key->ReadObj());
       if (obj->InheritsFrom("TMultiGraph")) {
          mg = (TMultiGraph *)obj;
-         bin = hProto->AddBin(mg);
+         bin = fPadPlane->AddBin(mg);
          // std::cout<<bin<<std::endl;
       }
    }
@@ -78,7 +77,7 @@ void AtTpcProtoMap::GenerateAtTpc()
    kIsGenerated = kTRUE;
 }
 
-TH2Poly *AtTpcProtoMap::GetAtTpcPlane()
+TH2Poly *AtTpcProtoMap::GetPadPlane()
 {
    // This method must be called after GenerateAtTPC()
 
@@ -86,23 +85,20 @@ TH2Poly *AtTpcProtoMap::GetAtTpcPlane()
       std::cout
          << " AtTPC Proto Map : No geometry file found! Please set the geometry file first via the SetGeoFile method "
          << std::endl;
-      return NULL;
+      return nullptr;
    }
 
    if (!kIsGenerated) {
       std::cout
          << "  AtTPC Proto Map : Pad plane has not been generated. Please generate it via the GenerateAtTPC method "
          << std::endl;
-      return NULL;
+      return nullptr;
    }
 
-   if (kGUIMode) {
-      cAtTPCPlane = new TCanvas("cAtTPCPlane", "cAtTPCPlane", 1000, 1000);
-      gStyle->SetPalette(1);
-      hProto->Draw("Lcol");
-   }
+   if (kGUIMode)
+      drawPadPlane();
 
-   return hProto;
+   return fPadPlane;
 }
 
 TH2Poly *AtTpcProtoMap::GetAtTpcPlane(TString TH2Poly_name)
@@ -112,53 +108,47 @@ TH2Poly *AtTpcProtoMap::GetAtTpcPlane(TString TH2Poly_name)
       std::cout
          << " AtTPC Proto Map : No geometry file found! Please set the geometry file first via SetGeoFile method "
          << std::endl;
-      return NULL;
+      return nullptr;
    }
-   hProto = (TH2Poly *)f->Get(TH2Poly_name.Data());
-   // cAtTPCPlane = new TCanvas("cAtTPCPlane","cAtTPCPlane",1000,1000);
-   // gStyle->SetPalette(1);
-   // hProto->Draw("Lcol");
-   return hProto;
+   fPadPlane = dynamic_cast<TH2Poly *>(f->Get(TH2Poly_name.Data()));
+   return fPadPlane;
 }
 
-std::vector<Float_t> AtTpcProtoMap::CalcPadCenter(Int_t PadRef)
+XYPoint AtTpcProtoMap::CalcPadCenter(Int_t PadRef)
 {
-
-   std::vector<Float_t> PadCenter = {-9999, -9999};
-   PadCenter.reserve(2);
 
    if (!kIsProtoMapSet) {
       std::cout << " AtTPC Proto Map : No map file for prototype found! Please set the geometry file first via the "
                    "SetProtoMap method "
                 << std::endl;
-      return PadCenter;
+      return {-9999, -9999};
    }
 
    if (f->IsZombie()) {
       std::cout
          << " AtTPC Proto Map : No geometry file found! Please set the geometry file first via the SetGeoFile method "
          << std::endl;
-      return PadCenter;
+      return {-9999, -9999};
    }
 
    if (PadRef != -1) { // Boost multi_array crashes with a negative index
-      std::map<Int_t, std::vector<Float_t>>::const_iterator its = ProtoGeoMap.find(PadRef);
+      auto its = ProtoGeoMap.find(PadRef);
 
       Int_t kIs = Int_t(ProtoGeoMap.find(PadRef) == ProtoGeoMap.end());
       if (kIs) {
          if (kDebug)
             std::cerr << " AtTpcProtoMap::CalcPadCenter - Pad  not found - CoboID : " << PadRef << std::endl;
-         return PadCenter;
+         return {-9999, -9999};
       }
 
-      PadCenter = (*its).second;
-      return PadCenter;
+      auto padCenter = (*its).second;
+      return {padCenter[0], padCenter[1]};
 
    } else {
 
       if (kDebug)
          std::cout << " AtTpcProtoMap::CalcPadCenter Error : Pad not found" << std::endl;
-      return PadCenter;
+      return {-9999, -9999};
    }
 }
 
@@ -173,7 +163,7 @@ Bool_t AtTpcProtoMap::SetProtoMap(TString file)
    Int_t bin_num = -1;
    std::vector<Float_t> PadCoord;
    PadCoord.reserve(2);
-   InProtoMap = new std::ifstream(file.Data());
+   auto InProtoMap = std::make_unique<std::ifstream>(file.Data());
 
    if (InProtoMap->fail()) {
       std::cout << " = AtTpcProtoMap::SetProtoMap : No Prototype Map file found! Please, check the path. Current :"
@@ -209,7 +199,7 @@ Int_t AtTpcProtoMap::BinToPad(Int_t binval)
       return -1;
    }
 
-   std::map<Int_t, Int_t>::const_iterator its = ProtoBinMap.find(binval);
+   auto its = ProtoBinMap.find(binval);
    Int_t padval = (*its).second;
    Int_t kIs = int(ProtoBinMap.find(binval) == ProtoBinMap.end());
    if (kIs) {

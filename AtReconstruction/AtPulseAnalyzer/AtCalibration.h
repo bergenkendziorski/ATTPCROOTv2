@@ -1,48 +1,49 @@
 #ifndef AtCALIBRAtION_H
 #define AtCALIBRAtION_H
 
-#include <fstream>
-#include <iostream>
+#include <Rtypes.h>
+#include <TObject.h>
+#include <TString.h>
 
-#include "TObject.h"
-#include "TString.h"
+#include <array>
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
-#define cGREEN "\033[1;32m"
+class TBuffer;
+class TClass;
+class TMemberInspector;
+
+using trace = std::array<Double_t, 512>;
 
 class AtCalibration : public TObject {
-public:
-   AtCalibration();
-   ~AtCalibration();
-
-   void SetGainFile(TString gainFile);
-   void SetJitterFile(TString jitterFile);
-
-   Double_t *CalibrateGain(Double_t adc[512], Int_t padNum);
-   Double_t *CalibrateJitter(Double_t adc[512], Int_t padNum);
-
-   Bool_t IsGainFile();
-   Bool_t IsJitterFile();
-
 protected:
    TString fGainFile;
    TString fJitterFile;
 
-   Double_t fGadc[512];
-   Double_t fGnewadc[512];
-   Double_t fJadc[512];
-   Double_t fJnewadc[512];
+   trace fGadc{};
+   trace fGnewadc{};
+   trace fJadc{};
+   trace fJnewadc{};
 
-   Bool_t fIsGainCalibrated;
-   Bool_t fIsJitterCalibrated;
+   Bool_t fIsGainCalibrated{false};
+   Bool_t fIsJitterCalibrated{false};
 
-   Double_t fGainCalib[10240];
-   Double_t fJitterCalib[10240];
+   std::array<Double_t, 10240> fGainCalib{};
+   std::array<Double_t, 10240> fJitterCalib{};
 
-   Int_t fPadNum;
+   Int_t fPadNum{};
 
-   ClassDef(AtCalibration, 1);
+public:
+   AtCalibration() = default;
+   ~AtCalibration() = default;
+
+   void SetGainFile(TString gainFile);
+   void SetJitterFile(TString jitterFile);
+
+   const trace &CalibrateGain(const trace &adc, Int_t padNum);
+   const trace &CalibrateJitter(const trace &adc, Int_t padNum);
+
+   Bool_t IsGainFile();
+   Bool_t IsJitterFile();
+
+   ClassDef(AtCalibration, 3);
 };
 #endif

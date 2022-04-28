@@ -7,45 +7,46 @@
 
 #include "AtTpcMap.h"
 
-#include <iostream>
-#include <fstream>
-#include <cassert>
+#include <FairLogger.h>
 
-#include "TCanvas.h"
-#include "TH2Poly.h"
-#include "TStyle.h"
+#include <Math/Point2D.h>
+#include <Rtypes.h>
+#include <TH2Poly.h>
+#include <TMath.h>
+#include <TMathBase.h>
+
+#include <boost/multi_array/base.hpp>
+#include <boost/multi_array/extent_gen.hpp>
+#include <boost/multi_array/multi_array_ref.hpp>
+#include <boost/multi_array/subarray.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <fstream> // IWYU pragma: keep
+#include <iostream>
+#include <vector>
 
 #undef BOOST_MULTI_ARRAY_NO_GENERATORS
 #define BOOST_MULTI_ARRAY_NO_GENERATORS
-#include "boost/multi_array.hpp"
 
 using std::cout;
 using std::endl;
+using XYPoint = ROOT::Math::XYPoint;
 
-#define cRED "\033[1;31m"
-#define cYELLOW "\033[1;33m"
-#define cNORMAL "\033[0m"
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
 
-AtTpcMap::AtTpcMap()
+AtTpcMap::AtTpcMap() : AtMap()
 {
-   kIsParsed = 0;
-   kGUIMode = 0;
-   kDebug = 0;
-   // AtPadCoord = // multiarray(boost::extents[10240][3][2]);
+   AtPadCoord.resize(boost::extents[10240][3][2]);
    std::fill(AtPadCoord.data(), AtPadCoord.data() + AtPadCoord.num_elements(), 0);
    std::cout << " ATTPC Map initialized " << std::endl;
    std::cout << " ATTPC Pad Coordinates container initialized " << std::endl;
-   fPadInd = 0;
    fNumberPads = 10240;
-   fIniPads.clear();
-   hPlane = new TH2Poly();
 }
 
-AtTpcMap::~AtTpcMap()
-{
-   // delete cATTPCPlane;
-   // delete hPlane;
-}
+AtTpcMap::~AtTpcMap() = default;
 
 void AtTpcMap::Dump()
 {
@@ -71,13 +72,13 @@ void AtTpcMap::Dump()
    coordmap.close();
 }
 
-void AtTpcMap::GenerateAtTpc()
+void AtTpcMap::GeneratePadPlane()
 {
 
    std::cout << " ATTPC Map : Generating the map geometry of the ATTPC " << std::endl;
    // Local variables
-   Float_t pads_in_half_hex;
-   Float_t pads_in_hex;
+   Float_t pads_in_half_hex = 0;
+   Float_t pads_in_hex = 0;
    Float_t row_length = 0;
    Float_t pads_in_half_row = 0;
    Int_t pads_out_half_hex = 0;
@@ -191,7 +192,9 @@ void AtTpcMap::GenerateAtTpc()
       pad_index_aux++;
    }
 
-   fPadInd = pad_index + pad_index_aux;
+   // fPadInd = pad_index + pad_index_aux;
+   std::cout << "created pads: " << pad_index + pad_index_aux << std::endl;
+   kIsParsed = true;
 }
 
 Int_t AtTpcMap::fill_coord(int pindex, float padxoff, float padyoff, float triside, float fort)
@@ -205,62 +208,48 @@ Int_t AtTpcMap::fill_coord(int pindex, float padxoff, float padyoff, float trisi
    return 0;
 }
 
-TH2Poly *AtTpcMap::GetAtTpcPlane()
+TH2Poly *AtTpcMap::GetPadPlane()
 {
 
-   if (fPadInd == 0) {
+   if (!kIsParsed) {
 
       std::cout << " AtTpcMap::GetATTPCPlane Error : Pad plane has not been generated - Exiting... " << std::endl;
 
-      return NULL;
+      return nullptr;
    }
 
-   hPlane->SetName("ATTPC_Plane");
-   hPlane->SetTitle("ATTPC_Plane");
+   fPadPlane->SetName("ATTPC_Plane");
+   fPadPlane->SetTitle("ATTPC_Plane");
 
-   for (Int_t i = 0; i < fPadInd; i++) {
+   // for (Int_t i = 0; i < fPadInd; i++) {
+   for (Int_t i = 0; i < fNumberPads; i++) {
 
       Double_t px[] = {AtPadCoord[i][0][0], AtPadCoord[i][1][0], AtPadCoord[i][2][0], AtPadCoord[i][0][0]};
       Double_t py[] = {AtPadCoord[i][0][1], AtPadCoord[i][1][1], AtPadCoord[i][2][1], AtPadCoord[i][0][1]};
-      hPlane->AddBin(4, px, py);
+      fPadPlane->AddBin(4, px, py);
    }
 
-   hPlane->ChangePartition(500, 500);
+   fPadPlane->ChangePartition(500, 500);
 
-   if (kGUIMode) {
-      cAtTPCPlane = new TCanvas("cATTPCPlane", "cATTPCPlane", 1000, 1000);
-      gStyle->SetPalette(1);
-      hPlane->Draw("col");
-   }
+   if (kGUIMode)
+      drawPadPlane();
 
-   return hPlane;
+   return fPadPlane;
 }
 
-std::vector<Float_t> AtTpcMap::CalcPadCenter(Int_t PadRef)
+XYPoint AtTpcMap::CalcPadCenter(Int_t PadRef)
 {
-
-   std::vector<Float_t> PadCenter = {-9999, -9999};
-   PadCenter.reserve(2);
-
-   if (!fPadInd || !kIsParsed) {
-
-      std::cout << " AtTpcMap::CalcPadCenter Error : Pad plane has not been generated or parsed " << std::endl;
-      return PadCenter;
+   if (!kIsParsed) {
+      LOG(error) << " AtTpcMap::CalcPadCenter Error : Pad plane has not been generated or parsed ";
+      return {-9999, -9999};
+   }
+   if (PadRef < 0) { // Boost multi_array crashes with a negative index
+      LOG(debug) << " AtTpcMap::CalcPadCenter Error : Pad not found";
+      return {-9999, -9999};
    }
 
-   if (PadRef >= 0) { // Boost multi_array crashes with a negative index
-
-      Float_t x = (AtPadCoord[PadRef][0][0] + AtPadCoord[PadRef][1][0] + AtPadCoord[PadRef][2][0]) / 3.;
-      PadCenter[0] = x;
-      Float_t y = (AtPadCoord[PadRef][0][1] + AtPadCoord[PadRef][1][1] + AtPadCoord[PadRef][2][1]) / 3.;
-      PadCenter[1] = y;
-      return PadCenter;
-
-   } else {
-
-      if (kDebug)
-         std::cout << " AtTpcMap::CalcPadCenter Error : Pad not found" << std::endl;
-      return PadCenter;
-   }
+   Float_t x = (AtPadCoord[PadRef][0][0] + AtPadCoord[PadRef][1][0] + AtPadCoord[PadRef][2][0]) / 3.;
+   Float_t y = (AtPadCoord[PadRef][0][1] + AtPadCoord[PadRef][1][1] + AtPadCoord[PadRef][2][1]) / 3.;
+   return {x, y};
 }
 ClassImp(AtTpcMap)

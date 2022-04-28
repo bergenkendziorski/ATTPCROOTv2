@@ -1,0 +1,5 @@
+---
+Checks:              '-clang-analyzer-optin.cplusplus.VirtualCall,-cppcoreguidelines-*'
+InheritParentConfig: true
+...
+

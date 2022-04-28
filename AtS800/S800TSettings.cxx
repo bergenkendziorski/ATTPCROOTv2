@@ -1,5 +1,10 @@
 #include "S800TSettings.h"
 
+#include <TString.h>
+
+#include <cstdio>
+#include <utility>
+
 S800TSettings::S800TSettings()
 {
 
@@ -7,7 +12,7 @@ S800TSettings::S800TSettings()
    this->fTitle = "S800T's Settings";
 }
 
-S800TSettings::~S800TSettings() {}
+S800TSettings::~S800TSettings() = default;
 
 void S800TSettings::AddCorrectionSettings(string Name, double slope, double inter, double toff)
 {

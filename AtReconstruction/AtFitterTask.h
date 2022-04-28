@@ -8,29 +8,27 @@
 #ifndef ATFITTERTASK
 #define ATFITTERTASK
 
+#include <Rtypes.h>
 // FAIRROOT classes
-#include "FairTask.h"
-#include "FairLogger.h"
+#include <FairTask.h>
 
-#include "AtFitter.h"
-#include "AtGenfit.h"
+#include <cstddef>
+#include <string>
+#include <vector>
 
-// GENFIT2 classes
-#include "AbsKalmanFitter.h"
-#include "KalmanFitterRefTrack.h"
-#include "DAF.h"
-//#include "GFRaveVertexFactory.h"
-#include "ConstField.h"
-#include "FieldManager.h"
-#include "MaterialEffects.h"
-#include "TGeoMaterialInterface.h"
-#include "MeasurementFactory.h"
-#include "MeasurementProducer.h"
-#include "EventDisplay.h"
+class AtDigiPar;
+class FairLogger;
+class TBuffer;
+class TClass;
+class TClonesArray;
+class TMemberInspector;
 
-#include "TClonesArray.h"
-
-#include <exception>
+namespace AtFITTER {
+class AtFitter;
+} // namespace AtFITTER
+namespace genfit {
+class Track;
+} // namespace genfit
 
 class AtFitterTask : public FairTask {
 
@@ -58,25 +56,25 @@ public:
 private:
    Bool_t fIsPersistence; //!< Persistence check variable
    FairLogger *fLogger;
-   AtDigiPar *fPar;
+   AtDigiPar *fPar{nullptr};
    TClonesArray *fPatternEventArray;
-   AtFITTER::AtFitter *fFitter;
-   Int_t fFitterAlgorithm;
+   AtFITTER::AtFitter *fFitter{};
+   Int_t fFitterAlgorithm{0};
 
    TClonesArray *fGenfitTrackArray;
    std::vector<genfit::Track> *fGenfitTrackVector;
 
-   std::size_t fEventCnt;
-   Float_t fMagneticField;
-   Int_t fMinIterations;
-   Int_t fMaxIterations;
-   Int_t fPDGCode;
-   Float_t fMass;
-   Int_t fAtomicNumber;
-   Float_t fNumFitPoints;
-   Float_t fMaxBrho;
-   Float_t fMinBrho;
-   std::string fELossFile;
+   std::size_t fEventCnt{0};
+   Float_t fMagneticField{2.0};
+   Int_t fMinIterations{5};
+   Int_t fMaxIterations{20};
+   Int_t fPDGCode{2212};
+   Float_t fMass{1.00727646};
+   Int_t fAtomicNumber{1};
+   Float_t fNumFitPoints{0.90};
+   Float_t fMaxBrho{3.0};
+   Float_t fMinBrho{0.01};
+   std::string fELossFile{""};
 
    ClassDef(AtFitterTask, 1);
 };

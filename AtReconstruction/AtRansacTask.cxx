@@ -1,33 +1,28 @@
-#include "AtRansac.h"
 #include "AtRansacTask.h"
 
-// FAIRROOT classes
-#include "FairRootManager.h"
-#include "FairRun.h"
-#include "FairRuntimeDb.h"
+#include "AtEvent.h"     // for AtEvent
+#include "AtLmedsMod.h"  // for AtLmedsMod
+#include "AtMlesacMod.h" // for AtMlesacMod
+#include "AtRansac.h"    // for AtRansac
+#include "AtRansacMod.h" // for AtRansacMod
 
-#include <iostream>
+#include <FairLogger.h>      // for LOG, Logger
+#include <FairRootManager.h> // for FairRootManager
+
+#include <TClonesArray.h> // for TClonesArray
+#include <TObject.h>      // for TObject
+
+#include <memory> // for allocator
 
 ClassImp(AtRansacTask);
 
-AtRansacTask::AtRansacTask() : fInputBranchName("AtEventH"), fOutputBranchName("AtRansac")
+AtRansacTask::AtRansacTask()
+   : fInputBranchName("AtEventH"), fOutputBranchName("AtRansac"), kIsPersistence(kFALSE), kIsFullMode(kFALSE),
+     kIsReprocess(kFALSE)
 {
-
-   kIsPersistence = kFALSE;
-   kIsFullMode = kFALSE;
-   kIsReprocess = kFALSE;
-
-   fRANSACModel = pcl::SACMODEL_LINE;
-   fRANSACThreshold = 5.0;
-   fMinHitsLine = 5;
-   fNumItera = 500;
-   fRANSACAlg = 0;
-   fRandSamplMode = 0;
-   fCharThres = 0;
-   fVertexMode = 0;
 }
 
-AtRansacTask::~AtRansacTask() {}
+AtRansacTask::~AtRansacTask() = default;
 
 void AtRansacTask::SetPersistence(Bool_t value)
 {
@@ -87,6 +82,14 @@ void AtRansacTask::SetVertexMode(Int_t value)
 {
    fVertexMode = value;
 }
+void AtRansacTask::SetInputBranchName(TString inputName)
+{
+   fInputBranchName = inputName;
+}
+void AtRansacTask::SetOutputBranchName(TString outputName)
+{
+   fOutputBranchName = outputName;
+}
 
 InitStatus AtRansacTask::Init()
 {
@@ -110,8 +113,9 @@ InitStatus AtRansacTask::Init()
       return kERROR;
    }
 
-   fEventArray = (TClonesArray *)ioMan->GetObject(fInputBranchName);
+   fEventArray = dynamic_cast<TClonesArray *>(ioMan->GetObject(fInputBranchName));
    if (fEventArray == nullptr) {
+
       LOG(error) << "Cannot find AtEvent array!";
       return kERROR;
    }
@@ -119,6 +123,7 @@ InitStatus AtRansacTask::Init()
    ioMan->Register(fOutputBranchName, "AtTPC", fRansacArray, kIsPersistence);
 
    if (kIsReprocess) {
+
       ioMan->Register("AtEventH", "AtTPC", fEventArray, kIsPersistence);
    }
 
@@ -133,12 +138,16 @@ void AtRansacTask::Exec(Option_t *opt)
    if (fEventArray->GetEntriesFast() == 0)
       return;
 
-   fEvent = (AtEvent *)fEventArray->At(0);
+   fEvent = dynamic_cast<AtEvent *>(fEventArray->At(0));
+
+   LOG(debug) << "Running RANSAC with " << fEvent->GetNumHits() << " hits.";
 
    if (fRANSACAlg == 0) {
-      AtRANSACN::AtRansac *Ransac = (AtRANSACN::AtRansac *)new ((*fRansacArray)[0]) AtRANSACN::AtRansac();
+      LOG(debug) << "Running RANSAC algorithm AtRANSACN::AtRansac";
+      auto *Ransac = (AtRANSACN::AtRansac *)new ((*fRansacArray)[0]) AtRANSACN::AtRansac();
       Ransac->SetTiltAngle(fTiltAngle);
-      Ransac->SetModelType(fRANSACModel);
+      if (fRANSACModel != -1)
+         Ransac->SetModelType(fRANSACModel);
       Ransac->SetDistanceThreshold(fRANSACThreshold);
       Ransac->SetMinHitsLine(fMinHitsLine);
       if (kIsFullMode)
@@ -147,9 +156,9 @@ void AtRansacTask::Exec(Option_t *opt)
          Ransac->CalcRANSAC(fEvent);
    }
 
-   // std::cout << "/* Number of hits in the task    */"<<fEvent->GetNumHits() << '\n';
    if (fRANSACAlg == 1) {
-      AtRansacMod *Rantest = (AtRansacMod *)new ((*fRansacArray)[0]) AtRansacMod();
+      LOG(debug) << "Running RANSAC algorithm AtRansacMod";
+      auto *Rantest = (AtRansacMod *)new ((*fRansacArray)[0]) AtRansacMod();
       Rantest->SetDistanceThreshold(fRANSACThreshold);
       Rantest->SetMinHitsLine(fMinHitsLine);
       Rantest->SetNumItera(fNumItera);
@@ -160,7 +169,8 @@ void AtRansacTask::Exec(Option_t *opt)
    }
 
    if (fRANSACAlg == 2) {
-      AtMlesacMod *Rantest = (AtMlesacMod *)new ((*fRansacArray)[0]) AtMlesacMod();
+      LOG(debug) << "Running RANSAC algorithm AtMlesacMod";
+      auto *Rantest = (AtMlesacMod *)new ((*fRansacArray)[0]) AtMlesacMod();
       Rantest->SetDistanceThreshold(fRANSACThreshold);
       Rantest->SetMinHitsLine(fMinHitsLine);
       Rantest->SetNumItera(fNumItera);
@@ -171,7 +181,8 @@ void AtRansacTask::Exec(Option_t *opt)
    }
 
    if (fRANSACAlg == 3) {
-      AtLmedsMod *Rantest = (AtLmedsMod *)new ((*fRansacArray)[0]) AtLmedsMod();
+      LOG(debug) << "Running RANSAC algorithm AtLmedsMod";
+      auto *Rantest = (AtLmedsMod *)new ((*fRansacArray)[0]) AtLmedsMod();
       Rantest->SetDistanceThreshold(fRANSACThreshold);
       Rantest->SetMinHitsLine(fMinHitsLine);
       Rantest->SetNumItera(fNumItera);

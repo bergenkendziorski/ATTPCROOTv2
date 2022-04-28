@@ -3,40 +3,28 @@
 // -----                Created 03/07/18  by H. Alvarez                -----
 // -------------------------------------------------------------------------
 #include "AtTPCXSReader.h"
+
 #include "AtVertexPropagator.h"
 
-#include "FairPrimaryGenerator.h"
-#include "FairRootManager.h"
-#include "FairLogger.h"
-#include "FairMCEventHeader.h"
+#include <FairIon.h>
+#include <FairParticle.h>
+#include <FairPrimaryGenerator.h>
+#include <FairRunSim.h>
 
-#include "FairIon.h"
-#include "FairParticle.h"
-#include "FairRunSim.h"
-#include "FairRunAna.h"
+#include <TDatabasePDG.h>
+#include <TH2.h>
+#include <TMath.h>
+#include <TParticle.h>
+#include <TParticlePDG.h>
+#include <TRandom.h>
+#include <TVector3.h>
 
-#include "TDatabasePDG.h"
-#include "TParticlePDG.h"
-#include "TObjArray.h"
-
-#include "TRandom.h"
-#include "TMath.h"
-#include "TLorentzVector.h"
-#include "TVector3.h"
-#include "TGenPhaseSpace.h"
-#include "TVirtualMC.h"
-#include "TParticle.h"
-#include "TClonesArray.h"
-
-#include "FairRunSim.h"
-#include "FairIon.h"
-#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
-#include "TParticle.h"
-
-#include "AtStack.h"
-#include "AtVertexPropagator.h"
-#include "AtEulerTransformation.h"
+#include <iostream>
 
 using std::cout;
 using std::endl;
@@ -52,11 +40,11 @@ AtTPCXSReader::AtTPCXSReader() : fMult(0), fPx(0.), fPy(0.), fPz(0.), fVx(0.), f
 AtTPCXSReader::AtTPCXSReader(const char *name, std::vector<Int_t> *z, std::vector<Int_t> *a, std::vector<Int_t> *q,
                              Int_t mult, std::vector<Double_t> *px, std::vector<Double_t> *py,
                              std::vector<Double_t> *pz, std::vector<Double_t> *mass)
-   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fVx(0.), fVy(0.), fVz(0.), fIon(0), fPType(0.), fQ(0)
+   : fMult(mult), fPx(0.), fPy(0.), fPz(0.), fVx(0.), fVy(0.), fVz(0.), fIon(0), fPType(0.), fQ(0)
 {
 
    fgNIon++;
-   fMult = mult;
+
    fIon.reserve(fMult);
 
    SetXSFileName();
@@ -64,10 +52,10 @@ AtTPCXSReader::AtTPCXSReader(const char *name, std::vector<Int_t> *z, std::vecto
    TString dir = getenv("VMCWORKDIR");
    TString XSFileName = dir + "/AtGenerators/" + fXSFileName;
    std::cout << " AtTPCXSReader: Opening input file " << XSFileName << std::endl;
-   std::ifstream *fInputXSFile = new std::ifstream(XSFileName);
+   auto fInputXSFile = std::ifstream(XSFileName);
    // std::ifstream*  fInputXSFile = new
    // std::ifstream("/home/ayyadlim/fair_install/AtTPCROOTv2_HAP/AtGenerators/xs_22Mgp_fusionEvaporation.txt");
-   if (!fInputXSFile->is_open())
+   if (!fInputXSFile.is_open())
       Fatal("AtTPCXSReader", "Cannot open input file.");
 
    std::cout << "AtTPCXSReader: opening PACE cross sections..." << std::endl;
@@ -77,10 +65,10 @@ AtTPCXSReader::AtTPCXSReader(const char *name, std::vector<Int_t> *z, std::vecto
 
    // fixed format
    for (Int_t energies = 0; energies < 31; energies++) {
-      *fInputXSFile >> ene[energies];
+      fInputXSFile >> ene[energies];
       // std::cout << ene[energies] << " ";
       for (Int_t xsvalues = 0; xsvalues < 18; xsvalues++) {
-         *fInputXSFile >> xs[energies][xsvalues];
+         fInputXSFile >> xs[energies][xsvalues];
          // std::cout << xs[energies][xsvalues]<< " ";
       }
       // std::cout << std::endl;
@@ -94,12 +82,10 @@ AtTPCXSReader::AtTPCXSReader(const char *name, std::vector<Int_t> *z, std::vecto
    }
    // fh_pdf->Write();
 
-   TDatabasePDG *pdgDB = TDatabasePDG::Instance();
-   TParticlePDG *kProtonPDG = pdgDB->GetParticle(2212);
-   TParticle *kProton = new TParticle();
+   auto *kProton = new TParticle();
    kProton->SetPdgCode(2212);
 
-   TParticle *kNeutron = new TParticle();
+   auto *kNeutron = new TParticle();
    kNeutron->SetPdgCode(2112);
 
    char buffer[30];
@@ -116,16 +102,16 @@ AtTPCXSReader::AtTPCXSReader(const char *name, std::vector<Int_t> *z, std::vecto
       if (a->at(i) != 1) {
          IonBuff = new FairIon(buffer, z->at(i), a->at(i), q->at(i), 0.0, mass->at(i));
          ParticleBuff = new FairParticle("dummyPart", 1, 1, 1.0, 0, 0.0, 0.0);
-         fPType.push_back("Ion");
+         fPType.emplace_back("Ion");
          std::cout << " Adding : " << buffer << std::endl;
       } else if (a->at(i) == 1 && z->at(i) == 1) {
          IonBuff = new FairIon("dummyIon", 50, 50, 0, 0.0, 100); // We fill the std::vector with a dummy ion
          ParticleBuff = new FairParticle(2212, kProton);
-         fPType.push_back("Proton");
+         fPType.emplace_back("Proton");
       } else if (a->at(i) == 1 && z->at(i) == 0) {
          IonBuff = new FairIon("dummyIon", 50, 50, 0, 0.0, 100); // We fill the std::vector with a dummy ion
          ParticleBuff = new FairParticle(2112, kNeutron);
-         fPType.push_back("Neutron");
+         fPType.emplace_back("Neutron");
       }
 
       std::cout << " Z " << z->at(i) << " A " << a->at(i) << std::endl;
@@ -162,11 +148,6 @@ AtTPCXSReader::AtTPCXSReader(const char *name, std::vector<Int_t> *z, std::vecto
    }
 }
 
-AtTPCXSReader::~AtTPCXSReader()
-{
-   //
-}
-
 Bool_t AtTPCXSReader::ReadEvent(FairPrimaryGenerator *primGen)
 {
    const Double_t rad2deg = 0.0174532925;
@@ -182,12 +163,10 @@ Bool_t AtTPCXSReader::ReadEvent(FairPrimaryGenerator *primGen)
    fPy.resize(fMult);
    fPx.resize(fMult);
 
-   AtStack *stack = (AtStack *)gMC->GetStack();
-
-   fBeamEnergy = gAtVP->GetEnergy();
+   fBeamEnergy = AtVertexPropagator::Instance()->GetEnergy();
 
    // Requires a non zero vertex energy and pre-generated Beam event (not punch thorugh)
-   if (gAtVP->GetEnergy() > 0 && gAtVP->GetDecayEvtCnt() % 2 != 0) {
+   if (AtVertexPropagator::Instance()->GetEnergy() > 0 && AtVertexPropagator::Instance()->GetDecayEvtCnt() % 2 != 0) {
       // proton parameters come from the XS PDF
       Double_t energyFromPDF, thetaFromPDF;
       fh_pdf->GetRandom2(energyFromPDF, thetaFromPDF);
@@ -195,15 +174,15 @@ Bool_t AtTPCXSReader::ReadEvent(FairPrimaryGenerator *primGen)
       Ang.push_back(thetaFromPDF * TMath::Pi() / 180); // set angle PROTON (in rad)
       Ene.push_back(energyFromPDF);                    // set energy PROTON
 
-      fPxBeam = gAtVP->GetPx();
-      fPyBeam = gAtVP->GetPy();
-      fPzBeam = gAtVP->GetPz();
+      fPxBeam = AtVertexPropagator::Instance()->GetPx();
+      fPyBeam = AtVertexPropagator::Instance()->GetPy();
+      fPzBeam = AtVertexPropagator::Instance()->GetPz();
 
-      Double_t eb = fBeamEnergy + fWm.at(0); // total (beam) projectile energy = projectile kinetic e + mass
+      // Double_t eb = fBeamEnergy + fWm.at(0); // total (beam) projectile energy = projectile kinetic e + mass
       Double_t pb2 = fBeamEnergy * fBeamEnergy + 2.0 * fBeamEnergy * fWm.at(0); //(beam) projectile momentum squared
-      Double_t pb = TMath::Sqrt(pb2);                                           //(beam)projectile momentum
-      // Double_t beta = pb/(eb+fWm.at(1));         // ??check beta of the projectile+target compound check??
-      // Double_t gamma = 1.0/sqrt(1.0-beta*beta);
+      // Double_t pb = TMath::Sqrt(pb2);                                           //(beam)projectile momentum
+      //  Double_t beta = pb/(eb+fWm.at(1));         // ??check beta of the projectile+target compound check??
+      //  Double_t gamma = 1.0/sqrt(1.0-beta*beta);
       Double_t e = fBeamEnergy + fWm.at(0) + fWm.at(1); // total energy (beam+target)
       Double_t e_cm2 = e * e - pb2;                     // cm energy (beam+target) squared
       Double_t e_cm = TMath::Sqrt(e_cm2);               // cm energy (beam+target)
@@ -226,11 +205,11 @@ Bool_t AtTPCXSReader::ReadEvent(FairPrimaryGenerator *primGen)
       Ang.push_back(theta_scatter); // set angle ION   DUMMY FOR THE MOMENT!!!!!!!!!!!!!!! CHECK AND SOLVE
       Ene.push_back(t_scatter);     // set energy ION
 
-      gAtVP->SetRecoilE(Ene.at(0));
-      gAtVP->SetRecoilA(Ang.at(0) * 180.0 / TMath::Pi()); // in degrees
+      AtVertexPropagator::Instance()->SetTrackEnergy(2, Ene.at(0));
+      AtVertexPropagator::Instance()->SetTrackAngle(2, Ang.at(0) * 180.0 / TMath::Pi());
 
-      gAtVP->SetScatterE(Ene.at(1));
-      gAtVP->SetScatterA(Ang.at(1) * 180.0 / TMath::Pi());
+      AtVertexPropagator::Instance()->SetTrackEnergy(1, Ene.at(1));
+      AtVertexPropagator::Instance()->SetTrackAngle(1, Ang.at(1) * 180.0 / TMath::Pi());
 
       fPx.at(0) = 0.0;
       fPy.at(0) = 0.0;
@@ -244,7 +223,8 @@ Bool_t AtTPCXSReader::ReadEvent(FairPrimaryGenerator *primGen)
       phi2 = phi1 + TMath::Pi();
 
       // To MeV for Euler Transformation
-      TVector3 BeamPos(gAtVP->GetPx() * 1000, gAtVP->GetPy() * 1000, gAtVP->GetPz() * 1000);
+      TVector3 BeamPos(AtVertexPropagator::Instance()->GetPx() * 1000, AtVertexPropagator::Instance()->GetPy() * 1000,
+                       AtVertexPropagator::Instance()->GetPz() * 1000);
 
       TVector3 direction1 = TVector3(sin(Ang.at(0)) * cos(phi1), sin(Ang.at(0)) * sin(phi1),
                                      cos(Ang.at(0))); // recoil
@@ -294,24 +274,27 @@ Bool_t AtTPCXSReader::ReadEvent(FairPrimaryGenerator *primGen)
          int pdgType = thisPart->PdgCode();
 
          // Propagate the vertex of the previous event
-         fVx = gAtVP->GetVx();
-         fVy = gAtVP->GetVy();
-         fVz = gAtVP->GetVz();
+         fVx = AtVertexPropagator::Instance()->GetVx();
+         fVy = AtVertexPropagator::Instance()->GetVy();
+         fVz = AtVertexPropagator::Instance()->GetVz();
 
          // TODO: Dirty way to propagate only the products (0 and 1 are beam and target respectively)
-         if (i > 1 && gAtVP->GetDecayEvtCnt() && pdgType != 1000500500 && fPType.at(i) == "Ion") {
+         if (i > 1 && AtVertexPropagator::Instance()->GetDecayEvtCnt() && pdgType != 1000500500 &&
+             fPType.at(i) == "Ion") {
             std::cout << "-I- FairIonGenerator: Generating ions of type " << fIon.at(i)->GetName() << " (PDG code "
                       << pdgType << ")" << std::endl;
             std::cout << "    Momentum (" << fPx.at(i) << ", " << fPy.at(i) << ", " << fPz.at(i)
                       << ") Gev from vertex (" << fVx << ", " << fVy << ", " << fVz << ") cm" << std::endl;
             primGen->AddTrack(pdgType, fPx.at(i), fPy.at(i), fPz.at(i), fVx, fVy, fVz);
-         } else if (i > 1 && gAtVP->GetDecayEvtCnt() && pdgType == 2212 && fPType.at(i) == "Proton") {
+         } else if (i > 1 && AtVertexPropagator::Instance()->GetDecayEvtCnt() && pdgType == 2212 &&
+                    fPType.at(i) == "Proton") {
             std::cout << "-I- FairIonGenerator: Generating ions of type " << fParticle.at(i)->GetName() << " (PDG code "
                       << pdgType << ")" << std::endl;
             std::cout << "    Momentum (" << fPx.at(i) << ", " << fPy.at(i) << ", " << fPz.at(i)
                       << ") Gev from vertex (" << fVx << ", " << fVy << ", " << fVz << ") cm" << std::endl;
             primGen->AddTrack(pdgType, fPx.at(i), fPy.at(i), fPz.at(i), fVx, fVy, fVz);
-         } else if (i > 1 && gAtVP->GetDecayEvtCnt() && pdgType == 2112 && fPType.at(i) == "Neutron") {
+         } else if (i > 1 && AtVertexPropagator::Instance()->GetDecayEvtCnt() && pdgType == 2112 &&
+                    fPType.at(i) == "Neutron") {
             std::cout << "-I- FairIonGenerator: Generating ions of type " << fParticle.at(i)->GetName() << " (PDG code "
                       << pdgType << ")" << std::endl;
             std::cout << "    Momentum (" << fPx.at(i) << ", " << fPy.at(i) << ", " << fPz.at(i)
@@ -321,7 +304,8 @@ Bool_t AtTPCXSReader::ReadEvent(FairPrimaryGenerator *primGen)
       }
    } // if residual energy > 0
 
-   gAtVP->IncDecayEvtCnt(); // TODO: Okay someone should put a more suitable name but we are on a hurry...
+   AtVertexPropagator::Instance()
+      ->IncDecayEvtCnt(); // TODO: Okay someone should put a more suitable name but we are on a hurry...
 
    return kTRUE;
 }

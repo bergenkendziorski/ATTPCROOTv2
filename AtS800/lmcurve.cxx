@@ -15,15 +15,15 @@
 
 #include "lmmin.h"
 
-typedef struct {
+using lmcurve_data_struct = struct {
    const double *t;
    const double *y;
    double (*f)(double t, const double *par);
-} lmcurve_data_struct;
+};
 
 void lmcurve_evaluate(const double *par, int m_dat, const void *data, double *fvec, int *info)
 {
-   int i;
+   int i = 0;
    for (i = 0; i < m_dat; i++)
       fvec[i] = ((lmcurve_data_struct *)data)->y[i] -
                 ((lmcurve_data_struct *)data)->f(((lmcurve_data_struct *)data)->t[i], par);

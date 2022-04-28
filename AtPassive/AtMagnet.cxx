@@ -13,22 +13,19 @@
 
 #include "AtMagnet.h"
 
-#include "TGeoManager.h"
-#include "FairRun.h"       // for FairRun
-#include "FairRuntimeDb.h" // for FairRuntimeDb
-#include "TList.h"         // for TListIter, TList (ptr only)
-#include "TObjArray.h"     // for TObjArray
-#include "TString.h"       // for TString
-#include "TGeoBBox.h"
-#include "TGeoCompositeShape.h"
-#include "TGeoTube.h"
-#include "TGeoMaterial.h"
-#include "TGeoElement.h"
-#include "TGeoMedium.h"
-#include <stddef.h> // for NULL
-#include <iostream> // for operator<<, basic_ostream, etc
+#include <FairModule.h>
 
-AtMagnet::~AtMagnet() {}
+#include <Rtypes.h>
+#include <TGeoBBox.h>
+#include <TGeoCompositeShape.h>
+#include <TGeoManager.h>
+#include <TGeoMaterial.h>
+#include <TGeoMatrix.h>
+#include <TGeoMedium.h>
+#include <TGeoTube.h>
+#include <TGeoVolume.h>
+
+AtMagnet::~AtMagnet() = default;
 AtMagnet::AtMagnet() : FairModule("AtMagnet", "") {}
 
 AtMagnet::AtMagnet(const char *name, const char *Title) : FairModule(name, Title) {}
@@ -39,24 +36,24 @@ void AtMagnet::ConstructGeometry()
    TGeoVolume *top = gGeoManager->GetTopVolume();
 
    // define some materials
-   TGeoMaterial *matFe = new TGeoMaterial("Fe", 55.84, 26, 7.9);
+   auto *matFe = new TGeoMaterial("Fe", 55.84, 26, 7.9);
 
    // define some media
-   TGeoMedium *Fe = new TGeoMedium("Fe", 100, matFe);
+   auto *Fe = new TGeoMedium("Fe", 100, matFe);
 
    // magnet yoke
-   TGeoBBox *magyoke1 = new TGeoBBox("magyoke1", 261 / 2.0, 221 / 2.0, 278 / 2.0);
-   TGeoBBox *magyoke2 = new TGeoBBox("magyoke2", 242 / 2.0, 202 / 2.0, 279 / 2.0);
+   new TGeoBBox("magyoke1", 261 / 2.0, 221 / 2.0, 278 / 2.0);
+   new TGeoBBox("magyoke2", 242 / 2.0, 202 / 2.0, 279 / 2.0);
 
-   TGeoCompositeShape *magyokec = new TGeoCompositeShape("magyokec", "magyoke1-magyoke2");
-   TGeoVolume *magyoke = new TGeoVolume("magyoke", magyokec, Fe);
+   auto *magyokec = new TGeoCompositeShape("magyokec", "magyoke1-magyoke2");
+   auto *magyoke = new TGeoVolume("magyoke", magyokec, Fe);
    magyoke->SetLineColor(kViolet + 2);
    magyoke->SetTransparency(50);
    top->AddNode(magyoke, 1, new TGeoTranslation(0, 6.079, 90));
 
    // magnet
-   TGeoTube *SolenoidGeo = new TGeoTube("SolenoidGeo", 125. / 4.0, 274. / 4.0, 229.0 / 2.0); // Radius divided by 2.0
-   TGeoVolume *SolenoidVol = new TGeoVolume("SolenoidVol", SolenoidGeo, Fe);
+   auto *SolenoidGeo = new TGeoTube("SolenoidGeo", 125. / 4.0, 274. / 4.0, 229.0 / 2.0); // Radius divided by 2.0
+   auto *SolenoidVol = new TGeoVolume("SolenoidVol", SolenoidGeo, Fe);
    SolenoidVol->SetLineColor(kWhite);
    SolenoidVol->SetTransparency(50);
    top->AddNode(SolenoidVol, 1, new TGeoTranslation(0, 6.079, 110));

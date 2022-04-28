@@ -1,11 +1,18 @@
 #ifndef __S800CALC_HH
 #define __S800CALC_HH
 
+#include <Rtypes.h>
+#include <TNamed.h>
+#include <TObject.h>
+
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <vector>
-#include <cmath>
-#include "TObject.h"
-#include "TNamed.h"
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 using namespace std;
 class S800;
@@ -31,7 +38,7 @@ public:
       fmaxchg = sqrt(-1.0);
       ffitprm.resize(3);
    }
-   ~CRDC() { Clear(); };
+   ~CRDC() = default;
 
    void Clear(Option_t * /*option*/ = "")
    { // modified to suppress warnings
@@ -148,7 +155,7 @@ public:
       ftac_obj = sqrt(-1.0);
       ftac_xfp = sqrt(-1.0);
    }
-   ~TOF() { Clear(); };
+   ~TOF() = default;
    void Clear(Option_t * /*option*/ = "")
    { // modified to suppress warnings
       //  void Clear(){

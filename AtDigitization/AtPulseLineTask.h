@@ -9,16 +9,19 @@
 #define AtPULSELINETASK_H
 
 #include "AtPulseTask.h"
+
+#include <Rtypes.h>
+
+#include <map>
+#include <vector>
+
 #include "Math/Vector3Dfwd.h"
 
-class TClonesArray;
-class AtDigiPar;
-class AtMap;
-class AtRawEvent;
 class AtSimulatedLine;
-class TF1;
-class TH1F;
-class TH2Poly;
+class AtSimulatedPoint;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtPulseLineTask : public AtPulseTask {
 
@@ -28,7 +31,7 @@ private:
 
    std::map<Int_t, Float_t> fXYintegrationMap; //! xyIntegrationMap[padNum] = % of e- in event here
 
-   void generateIntegrationMap(AtSimulatedLine *line);
+   void generateIntegrationMap(AtSimulatedLine &line);
    Int_t throwRandomAndGetBinAfterDiffusion(const ROOT::Math::XYZVector &loc, Double_t diffusionSigma);
 
    // Returns the bin ID (binMin) that the zIntegral starts from

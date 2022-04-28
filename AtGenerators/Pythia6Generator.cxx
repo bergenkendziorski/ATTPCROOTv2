@@ -14,10 +14,10 @@
 // -------------------------------------------------------------------------
 #include "Pythia6Generator.h"
 
-#include "FairPrimaryGenerator.h"
+#include <FairPrimaryGenerator.h>
 
-#include <iostream>
 #include <cstdio>
+#include <iostream>
 
 using std::cout;
 using std::endl;

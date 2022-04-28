@@ -15,6 +15,10 @@
 
 #include "AtFieldPar.h"
 
+#include <FairField.h>
+
+#include <TString.h>
+
 #include <iomanip>
 #include <iostream>
 
@@ -64,7 +68,7 @@ AtConstField::AtConstField(AtFieldPar *fieldPar)
 // -------------------------------------------------------------------------
 
 // -----   Destructor   ----------------------------------------------------
-AtConstField::~AtConstField() {}
+AtConstField::~AtConstField() = default;
 // -------------------------------------------------------------------------
 
 // -----   Set field region   ----------------------------------------------

@@ -1,31 +1,38 @@
 #ifndef ATFILTERTASK_H
 #define ATFILTERTASK_H
 
+#include <TString.h>
 // FairRoot classes
-#include "FairTask.h"
+#include <FairTask.h>
+
+#include <Rtypes.h>
 
 // ATTPCROOT classes;
 class AtFilter;
-
 // ROOT classes
 class TClonesArray;
 
 class AtFilterTask : public FairTask {
 
 private:
-   TClonesArray *fInputEventArray;  // AtRawEvent
-   TClonesArray *fOutputEventArray; // AtRawEvent
+   TClonesArray *fInputEventArray{nullptr}; // AtRawEvent
+   TClonesArray *fOutputEventArray;         // AtRawEvent
 
    AtFilter *fFilter;
-   Bool_t fIsPersistent;
-   Bool_t fFilterAux;
+   Bool_t fIsPersistent{false};
+   Bool_t fFilterAux{false};
+
+   TString fInputBranchName{"AtRawEvent"};
+   TString fOutputBranchName{"AtRawEventFiltered"};
 
 public:
-   AtFilterTask(AtFilter *filter);
-   ~AtFilterTask();
+   AtFilterTask(AtFilter *filter, const char *name = "AtFilterTask");
+   ~AtFilterTask() = default;
 
-   void SetPersistence(Bool_t value);
-   void SetFilterAux(Bool_t value);
+   void SetPersistence(Bool_t value) { fIsPersistent = value; }
+   void SetFilterAux(Bool_t value) { fFilterAux = value; }
+   void SetInputBranch(TString name) { fInputBranchName = name; }
+   void SetOutputBranch(TString name) { fOutputBranchName = name; }
    virtual InitStatus Init() override;
    virtual void Exec(Option_t *opt) override;
 };

@@ -1,13 +1,14 @@
 #ifndef __S800SETTINGS_HH
 #define __S800SETTINGS_HH
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <map>
+#include <Rtypes.h>
+#include <TObject.h>
 
-#include "TSystem.h"
-#include "TEnv.h"
+#include <string>
+
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class S800Settings : public TObject {
 public:
@@ -38,12 +39,12 @@ protected:
    std::string fBadFile;
    std::string fCalFileIC;
 
-   Int_t fXFit;
-   Int_t fXFitFunc;
-   Float_t fxOffset[2];
-   Float_t fxSlope[2];
-   Float_t fyOffset[2];
-   Float_t fySlope[2];
+   Int_t fXFit{};
+   Int_t fXFitFunc{};
+   Float_t fxOffset[2]{};
+   Float_t fxSlope[2]{};
+   Float_t fyOffset[2]{};
+   Float_t fySlope[2]{};
 
    ClassDef(S800Settings, 1)
 };

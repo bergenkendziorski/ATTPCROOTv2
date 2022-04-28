@@ -1,22 +1,19 @@
 #ifndef AtEVENTMANAGERPROTO_H
 #define AtEVENTMANAGERPROTO_H
 
-#include "TEveEventManager.h"
-#include "FairEventManager.h"
-#include "TGNumberEntry.h"
-#include "TGCanvas.h"
+#include <FairRunAna.h>
 
-#include "FairRunAna.h"
-#include "FairRootManager.h"
-#include "FairTask.h"
+#include <Rtypes.h>
+#include <TEveEventManager.h>
 
-#include "TCanvas.h"
-#include "TFile.h"
-
-#ifndef __CINT__ // Boost
-#include <boost/multi_array.hpp>
-#endif //__CINT__
-
+class FairRootManager;
+class FairTask;
+class TBuffer;
+class TCanvas;
+class TClass;
+class TGNumberEntry;
+class TGTextButton;
+class TMemberInspector;
 class TGListTreeItem;
 
 class AtEventManagerProto : public TEveEventManager {
@@ -69,7 +66,7 @@ private:
    FairRootManager *fRootManager;
    FairRunAna *fRunAna;
 
-   Bool_t kEraseQ;
+   Bool_t kEraseQ{};
    Bool_t kDrawPROn;
 
    Int_t fEntry;
@@ -78,25 +75,25 @@ private:
    TGTextButton *drawPatternRecognition;
    TGTextButton *saveASCIIevent;
 
-   TCanvas *fCvsPadPlane;
-   TCanvas *fPadWave;
-   TCanvas *fPadAll;
-   TCanvas *fCvsQEvent;
-   TCanvas *fCvsHough;
-   TCanvas *fCvsPhi;
-   TCanvas *fCvsMesh;
-   TCanvas *fCvs3DHist;
-   TCanvas *fCvsQuadrant1;
-   TCanvas *fCvsQuadrant2;
-   TCanvas *fCvsQuadrant3;
-   TCanvas *fCvsQuadrant4;
-   TCanvas *fCvsELQuadrant1;
-   TCanvas *fCvsELQuadrant2;
-   TCanvas *fCvsELQuadrant3;
-   TCanvas *fCvsELQuadrant4;
-   TCanvas *fCvsVertex;
-   TCanvas *fCvsKineAA;
-   TCanvas *fCvsAux;
+   TCanvas *fCvsPadPlane{};
+   TCanvas *fPadWave{};
+   TCanvas *fPadAll{};
+   TCanvas *fCvsQEvent{};
+   TCanvas *fCvsHough{};
+   TCanvas *fCvsPhi{};
+   TCanvas *fCvsMesh{};
+   TCanvas *fCvs3DHist{};
+   TCanvas *fCvsQuadrant1{};
+   TCanvas *fCvsQuadrant2{};
+   TCanvas *fCvsQuadrant3{};
+   TCanvas *fCvsQuadrant4{};
+   TCanvas *fCvsELQuadrant1{};
+   TCanvas *fCvsELQuadrant2{};
+   TCanvas *fCvsELQuadrant3{};
+   TCanvas *fCvsELQuadrant4{};
+   TCanvas *fCvsVertex{};
+   TCanvas *fCvsKineAA{};
+   TCanvas *fCvsAux{};
 
    static AtEventManagerProto *fInstance;
 

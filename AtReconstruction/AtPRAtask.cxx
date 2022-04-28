@@ -1,22 +1,30 @@
 #include "AtPRAtask.h"
 
-#include <chrono>
-#include <iostream>
-#include <thread>
-#include <iostream>
-#include <memory>
+#include "AtDigiPar.h"       // for AtDigiPar
+#include "AtEvent.h"         // for AtEvent
+#include "AtHit.h"           // for AtHit
+#include "AtPRA.h"           // for AtPRA
+#include "AtPatternEvent.h"  // for AtPatternEvent
+#include "AtTrackFinderHC.h" // for AtTrackFinderHC
 
-//// FAIRROOT classes
-#include "FairRootManager.h"
-#include "FairRun.h"
-#include "FairRuntimeDb.h"
-#include "FairLogger.h"
+#include <FairLogger.h>      // for LOG, FairLogger
+#include <FairRootManager.h> // for FairRootManager
+#include <FairRun.h>         // for FairRun
+#include <FairRuntimeDb.h>   // for FairRuntimeDb
 
-AtPRAtask::AtPRAtask() : FairTask("AtPRAtask")
+#include <TObject.h> // for TObject
+
+#include <algorithm> // for max
+#include <iostream>  // for operator<<, basic_ostream, cout, ostream
+#include <stdexcept> // for runtime_error
+#include <vector>    // for allocator, vector
+
+AtPRAtask::AtPRAtask()
+   : FairTask("AtPRAtask"), fLogger(FairLogger::GetLogger()), fPatternEventArray("AtPatternEvent", 1)
 {
-   fLogger = FairLogger::GetLogger();
+
    LOG(debug) << "Default Constructor of AtPRAtask";
-   fPar = NULL;
+   fPar = nullptr;
    fPRAlgorithm = 0;
    kIsPersistence = kFALSE;
    fMinNumHits = 10;
@@ -59,11 +67,11 @@ void AtPRAtask::SetParContainers()
    if (!run)
       LOG(fatal) << "No analysis run!";
 
-   FairRuntimeDb *db = run->GetRuntimeDb();
+   FairRuntimeDb *db = run->GetRuntimeDb(); // NOLINT
    if (!db)
       LOG(fatal) << "No runtime database!";
 
-   fPar = (AtDigiPar *)db->getContainer("AtDigiPar");
+   fPar = (AtDigiPar *)db->getContainer("AtDigiPar"); // NOLINT
    if (!fPar)
       LOG(fatal) << "AtDigiPar not found!!";
 }
@@ -71,8 +79,6 @@ void AtPRAtask::SetParContainers()
 InitStatus AtPRAtask::Init()
 {
    LOG(debug) << "Initilization of AtPRAtask";
-
-   fPatternEventArray = new TClonesArray("AtPatternEvent");
 
    if (fPRAlgorithm == 0) {
       LOG(info) << "Using Track Finder Hierarchical Clustering algorithm";
@@ -119,18 +125,18 @@ InitStatus AtPRAtask::Init()
 
    // Get a handle from the IO manager
    FairRootManager *ioMan = FairRootManager::Instance();
-   if (ioMan == 0) {
+   if (ioMan == nullptr) {
       LOG(error) << "Cannot find RootManager!";
       return kERROR;
    }
 
-   fEventHArray = (TClonesArray *)ioMan->GetObject("AtEventH");
-   if (fEventHArray == 0) {
+   fEventHArray = dynamic_cast<TClonesArray *>(ioMan->GetObject("AtEventH"));
+   if (fEventHArray == nullptr) {
       LOG(error) << "Cannot find AtEvent array!";
       return kERROR;
    }
 
-   ioMan->Register("AtPatternEvent", "AtTPC", fPatternEventArray, kIsPersistence);
+   ioMan->Register("AtPatternEvent", "AtTPC", &fPatternEventArray, kIsPersistence);
 
    return kSUCCESS;
 }
@@ -139,20 +145,20 @@ void AtPRAtask::Exec(Option_t *option)
 {
    LOG(debug) << "Exec of AtPRAtask";
 
-   fPatternEventArray->Delete();
+   fPatternEventArray.Delete();
 
    if (fEventHArray->GetEntriesFast() == 0)
       return;
 
    std::vector<AtHit> hitArray;
-   AtEvent &event = *((AtEvent *)fEventHArray->At(0));
-   hitArray = *event.GetHitArray();
+   AtEvent &event = *(dynamic_cast<AtEvent *>(fEventHArray->At(0))); // TODO: Make sure we are not copying
+   hitArray = event.GetHitArray();
 
    std::cout << "  -I- AtTrackFinderHCTask -  Event Number :  " << event.GetEventID() << "\n";
 
    try {
 
-      AtPatternEvent *patternEvent = (AtPatternEvent *)new ((*fPatternEventArray)[0]) AtPatternEvent();
+      auto *patternEvent = (AtPatternEvent *)new (fPatternEventArray[0]) AtPatternEvent();
 
       if (hitArray.size() > fMinNumHits && hitArray.size() < fMaxNumHits)
          fPRA->FindTracks(event, patternEvent);

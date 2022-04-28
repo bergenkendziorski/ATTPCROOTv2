@@ -9,12 +9,15 @@
 #ifndef AtTPCIONGENERAtOR_H
 #define AtTPCIONGENERAtOR_H
 
-#include "FairGenerator.h"
-#include "FairIon.h"
+#include <FairGenerator.h>
 
-#include <iostream>
+#include <Rtypes.h>
 
 class FairPrimaryGenerator;
+class FairIon;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 class AtTPCIonGenerator : public FairGenerator {
 
@@ -55,7 +58,7 @@ public:
    AtTPCIonGenerator &operator=(const AtTPCIonGenerator &) { return *this; }
 
    /** Destructor **/
-   virtual ~AtTPCIonGenerator();
+   virtual ~AtTPCIonGenerator() = default;
 
    /** Modifiers **/
    void SetCharge(Int_t charge) { fQ = charge; }
@@ -95,8 +98,8 @@ private:
    Double_t fVx, fVy, fVz;     // Vertex coordinates [cm]
    FairIon *fIon;              // Pointer to the FairIon to be generated
    Int_t fQ;                   // Electric charge [e]
-   Int_t fNomEner;
-   Double_t fMaxEnLoss; // Max energy loss before reation happens
+   Int_t fNomEner{};
+   Double_t fMaxEnLoss{}; // Max energy loss before reation happens
    Double32_t fWhmFocus, fDiv, fZFocus,
       fRHole; // Beam whm at focus, beam divergence, z focus, radius of the pad plan hole
 

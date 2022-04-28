@@ -1,16 +1,27 @@
 #include "AtLmedsMod.h"
 
-// FairRoot classes
-#include "FairRuntimeDb.h"
-#include "FairRun.h"
+#include "AtEvent.h" // for AtEvent
+#include "AtHit.h"   // for AtHit
 
-#include <iostream>
+#include <Math/Point3D.h> // for PositionVector3D
+#include <TMath.h>        // for Pi
+#include <TRandom.h>      // for TRandom, gRandom
+
+#include <cmath>    // for cos, sin, pow, sqrt, fabs, exp, acos, atan
+#include <fstream>  // for std
+#include <iterator> // for insert_iterator, inserter
+#include <memory>   // for allocator_traits<>::value_type
+
+constexpr auto cRED = "\033[1;31m";
+constexpr auto cYELLOW = "\033[1;33m";
+constexpr auto cNORMAL = "\033[0m";
+constexpr auto cGREEN = "\033[1;32m";
 
 using namespace std;
 
-ClassImp(AtLmedsMod)
+ClassImp(AtLmedsMod);
 
-   AtLmedsMod::AtLmedsMod()
+AtLmedsMod::AtLmedsMod()
 {
 
    fLmedsMaxIteration = 500;
@@ -27,20 +38,20 @@ ClassImp(AtLmedsMod)
    // fVertexMod = 0;
 }
 
-AtLmedsMod::~AtLmedsMod() {}
+AtLmedsMod::~AtLmedsMod() = default;
 
 void AtLmedsMod::Init(AtEvent *event)
 {
 
    Reset();
 
-   std::vector<AtHit> *hitArray = event->GetHitArray();
-   Int_t nHits = hitArray->size();
+   auto hitArray = event->GetHitArray();
+   Int_t nHits = hitArray.size();
    // std::cout << "Init   Hitarray size    "<<nHits << '\n';
 
    for (Int_t iHit = 0; iHit < nHits; iHit++) {
-      AtHit hit = hitArray->at(iHit);
-      TVector3 position = hit.GetPosition();
+      AtHit hit = hitArray.at(iHit);
+      auto position = hit.GetPosition();
       Double_t tq = hit.GetCharge();
       if (tq < fChargeThres)
          continue;
@@ -52,8 +63,8 @@ void AtLmedsMod::Init(AtEvent *event)
 
    fOriginalCloudSize = vX.size();
    double TotalCharge = 0;
-   for (unsigned int i = 0; i < vQ.size(); i++) {
-      TotalCharge += vQ[i];
+   for (double i : vQ) {
+      TotalCharge += i;
    }
    fTotalCharge = TotalCharge;
 }
@@ -151,7 +162,7 @@ vector<int> AtLmedsMod::RandSam(vector<int> indX, Int_t mode)
             if (Proba[p2] >= w2)
                cond = true;
          } else {
-            w2 = 1;
+            // w2 = 1;
             cond = true;
          }
       } while (p2 == p1 || cond == false);
@@ -188,7 +199,7 @@ vector<int> AtLmedsMod::RandSam(vector<int> indX, Int_t mode)
             if (Proba[p2] >= w2)
                cond = true;
          } else {
-            w2 = 1;
+            // w2 = 1;
             cond = true;
          }
 
@@ -248,9 +259,9 @@ void AtLmedsMod::Solve()
       // std::vector<int> inlIdxR;
       int nbInliers = 0;
 
-      for (auto j = remainIndex.begin(); j != remainIndex.end(); ++j) {
+      for (int &j : remainIndex) {
 
-         double error = EstimError(*j); // error of each point relative to the model
+         double error = EstimError(j); // error of each point relative to the model
          error = error * error;
 
          if (error < (fLmedsThreshold * fLmedsThreshold)) {
@@ -266,8 +277,8 @@ void AtLmedsMod::Solve()
       if (nbInliers > fLmedsMinPoints) {
          // getting the best models
          double scale = med / nbInliers;
-         IdxMod1.push_back(std::make_pair(scale, Rsamples[0]));
-         IdxMod2.push_back(std::make_pair(scale, Rsamples[1]));
+         IdxMod1.emplace_back(scale, Rsamples[0]);
+         IdxMod2.emplace_back(scale, Rsamples[1]);
       } // if a cluster was found
 
    } // for Lmeds interactions
@@ -292,11 +303,11 @@ void AtLmedsMod::Solve()
 
       int counter = 0;
 
-      for (auto j = remainIndex.begin(); j != remainIndex.end(); ++j) {
-         double error = EstimError(*j);
+      for (int &j : remainIndex) {
+         double error = EstimError(j);
 
          if ((error * error) < (fLmedsThreshold * fLmedsThreshold)) {
-            inlIdxR.push_back(*j);
+            inlIdxR.push_back(j);
             counter++;
          }
       }
@@ -377,7 +388,7 @@ std::vector<AtTrack *> AtLmedsMod::Clusters2Tracks(AllClusters NClusters, AtEven
 
    std::vector<AtTrack *> tracks;
 
-   std::vector<AtHit> *hits = event->GetHitArray();
+   auto hits = event->GetHitArray();
 
    int numclus = NClusters.size();
    // std::cout << "numero de clusters "<<numclus << '\n';
@@ -390,10 +401,10 @@ std::vector<AtTrack *> AtLmedsMod::Clusters2Tracks(AllClusters NClusters, AtEven
       TVector3 punto1 = NClusters[i].ClusterFitP1;
       TVector3 punto2 = NClusters[i].ClusterFitP2;
       TVector3 pdiff = punto2 - punto1;
-      AtTrack *track = new AtTrack();
+      auto *track = new AtTrack();
       // std::cout << "hits en el cluster   "<<clustersize<<"   "<<indicesCluster.size() << '\n';
       for (int j = 0; j < clustersize; j++) {
-         track->AddHit(&hits->at(indicesCluster[j]));
+         track->AddHit(hits.at(indicesCluster[j]));
          // std::cout << j <<"  "<<indicesCluster[j]<< '\n';
       }
       // std::cout << "hits en el track   "<<track->GetHitArray()->size()<<"   "<<
@@ -483,8 +494,8 @@ void AtLmedsMod::FindVertex(std::vector<AtTrack *> tracks)
 
             if (vertexbuff.Z() > 0 && vertexbuff.Z() < 1000 && radius < 25.0) {
 
-               track->SetTrackVertex(vertexbuff);
-               track_f->SetTrackVertex(vertexbuff);
+               track->SetTrackVertex(XYZPoint(vertexbuff));
+               track_f->SetTrackVertex(XYZPoint(vertexbuff));
                fVertex_1.SetXYZ(vertexbuff.X(), vertexbuff.Y(), vertexbuff.Z());
                fVertex_2.SetXYZ(vertexbuff.X(), vertexbuff.Y(), vertexbuff.Z());
                fVertex_mean = vertexbuff;
@@ -512,8 +523,8 @@ void AtLmedsMod::FindVertex(std::vector<AtTrack *> tracks)
                if (vertexbuffdif.Mag() > 2 * fLineDistThreshold)
                   continue;
 
-               track->SetTrackVertex(vertexbuffav);
-               track_f->SetTrackVertex(vertexbuffav);
+               track->SetTrackVertex(XYZPoint(vertexbuffav));
+               track_f->SetTrackVertex(XYZPoint(vertexbuffav));
                fVertex_1.SetXYZ(vertexbuffav.X(), vertexbuffav.Y(), vertexbuffav.Z());
                fVertex_2.SetXYZ(vertexbuffav.X(), vertexbuffav.Y(), vertexbuffav.Z());
                fVertex_mean = vertexbuffav;
@@ -572,9 +583,8 @@ void AtLmedsMod::FindVertexOneTrack(std::vector<AtTrack *> tracks)
       IsFilled.push_back(kFALSE);
 
    // Test each line against the others to find a vertex candidate
-   for (Int_t i = 0; i < int(tracks.size()); i++) {
+   for (auto track : tracks) {
 
-      AtTrack *track = tracks.at(i);
       std::vector<Double_t> p = track->GetFitPar();
 
       if (p.size() == 0)
@@ -583,7 +593,7 @@ void AtLmedsMod::FindVertexOneTrack(std::vector<AtTrack *> tracks)
       TVector3 p1(p[0], p[2], p[4]); // p1
       TVector3 e1(p[1], p[3], p[5]); // d1
 
-      double angle = e1.Angle(BeamDir) * 180. / 3.1415;
+      // double angle = e1.Angle(BeamDir) * 180. / 3.1415;
 
       TVector3 n = e1.Cross(BeamDir);
       double sdist = fabs(n.Dot(p1 - BeamPoint) / n.Mag());
@@ -595,7 +605,7 @@ void AtLmedsMod::FindVertexOneTrack(std::vector<AtTrack *> tracks)
 
          if (radius < 25.0) {
 
-            track->SetTrackVertex(vertexbuff);
+            track->SetTrackVertex(XYZPoint(vertexbuff));
             fVertex_1.SetXYZ(vertexbuff.X(), vertexbuff.Y(), vertexbuff.Z());
             fVertex_mean = vertexbuff;
 
@@ -700,7 +710,7 @@ Double_t AtLmedsMod::Fit3D(vector<int> inliners, TVector3 &V1, TVector3 &V2)
 
    K11 = (Syy + Szz) * pow(cos(theta), 2) + (Sxx + Szz) * pow(sin(theta), 2) - 2. * Sxy * cos(theta) * sin(theta);
    K22 = (Syy + Szz) * pow(sin(theta), 2) + (Sxx + Szz) * pow(cos(theta), 2) + 2. * Sxy * cos(theta) * sin(theta);
-   K12 = -Sxy * (pow(cos(theta), 2) - pow(sin(theta), 2)) + (Sxx - Syy) * cos(theta) * sin(theta);
+   // K12 = -Sxy * (pow(cos(theta), 2) - pow(sin(theta), 2)) + (Sxx - Syy) * cos(theta) * sin(theta);
    K10 = Sxz * cos(theta) + Syz * sin(theta);
    K01 = -Sxz * sin(theta) + Syz * cos(theta);
    K00 = Sxx + Syy;
@@ -715,7 +725,7 @@ Double_t AtLmedsMod::Fit3D(vector<int> inliners, TVector3 &V1, TVector3 &V2)
 
    if (r > 0)
       dm2 = -c2 / 3. + pow(-q / 2. + sqrt(r), 1. / 3.) + pow(-q / 2. - sqrt(r), 1. / 3.);
-   if (r < 0) {
+   else {
       rho = sqrt(-pow(p, 3) / 27.);
       phi = acos(-q / (2. * rho));
       dm2 = min(-c2 / 3. + 2. * pow(rho, 1. / 3.) * cos(phi / 3.),

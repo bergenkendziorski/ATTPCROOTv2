@@ -1,14 +1,15 @@
 #include "AtSimulatedLine.h"
 
+#include <utility>
+
 using XYZVector = ROOT::Math::XYZVector;
 
 AtSimulatedLine::AtSimulatedLine() : AtSimulatedPoint(), fSigmaLongDiffusion(-1), fSigmaTransDiffusion(-1) {}
 
 AtSimulatedLine::AtSimulatedLine(std::size_t mcPointID, Int_t clusterID, Int_t charge, const XYZVector &posIn,
-                                 const XYZVector &posOut, Double_t longitudalDiffusionSigma,
-                                 Double_t transverseDiffusionSigma)
+                                 XYZVector posOut, Double_t longitudalDiffusionSigma, Double_t transverseDiffusionSigma)
    : AtSimulatedPoint(mcPointID, clusterID, charge, posIn), fSigmaTransDiffusion(transverseDiffusionSigma),
-     fSigmaLongDiffusion(longitudalDiffusionSigma), fPositionFinal(posOut)
+     fSigmaLongDiffusion(longitudalDiffusionSigma), fPositionFinal(std::move(posOut))
 {
 }
 

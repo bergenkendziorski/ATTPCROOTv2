@@ -1,23 +1,22 @@
 #ifndef AtTPCFISSIONGENERAtORV3_H
 #define AtTPCFISSIONGENERAtORV3_H
 
-/* Fission generator for beam induced fission events
- * Takes a csv file that defines the distribution of fission fragments
- * availible. An example can be found in ______.
- *
- * Adam Anthony 8/23/2019
- *
- */
-#include <fstream>
-#include <iostream>
+#include <FairGenerator.h>
 
-#include "FairGenerator.h"
+#include <Math/GenVector/Boost.h>
+#include <Math/Point3D.h>
+#include <Math/Vector4D.h>
+#include <Rtypes.h>
+#include <TString.h>
 
-#include "Math/GenVector/LorentzVector.h"
-#include "Math/Boost.h"
+#include <vector>
 
 class TFile;
 class TTree;
+class FairPrimaryGenerator;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 using VecPE = ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<>>;
 using Cartesian3D = ROOT::Math::Cartesian3D<>;
@@ -25,19 +24,19 @@ using Cartesian3D = ROOT::Math::Cartesian3D<>;
 class AtTPCFissionGeneratorV3 : public FairGenerator {
 
 private:
-   TFile *fEventFile; //!
-   TTree *fEventTree; //!
+   TFile *fEventFile{}; //!
+   TTree *fEventTree{}; //!
 
    // Variables read from the file for each event
-   std::vector<VecPE> *fDecayFrags; //!
-   std::vector<Int_t> *fA;          //!
-   std::vector<Int_t> *fZ;          //!
+   std::vector<VecPE> *fDecayFrags{}; //!
+   std::vector<Int_t> *fA{};          //!
+   std::vector<Int_t> *fZ{};          //!
 
-   Int_t fNumEvents; //! Number of unique fission simualtion events
-   Int_t fCurrEvent; //! Track what event we are at. Reset to 0 if we flow over the number of events in the tree
+   Int_t fNumEvents{}; //! Number of unique fission simualtion events
+   Int_t fCurrEvent{}; //! Track what event we are at. Reset to 0 if we flow over the number of events in the tree
 
    // Varibles set for each event
-   FairPrimaryGenerator *fPrimeGen; //!
+   FairPrimaryGenerator *fPrimeGen{}; //!
    ROOT::Math::Boost fBeamBoost;
    Cartesian3D fVertex;
 

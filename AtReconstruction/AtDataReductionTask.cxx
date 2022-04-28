@@ -1,26 +1,31 @@
 #include "AtDataReductionTask.h"
+
 #include "AtRawEvent.h"
 
-#include "FairLogger.h"
-#include "FairRunAna.h"
-#include "FairRootManager.h"
+#include <FairLogger.h>
+#include <FairRootManager.h>
+#include <FairRunAna.h>
+#include <FairTask.h>
 
-#include "TClonesArray.h"
+#include <TClonesArray.h>
+#include <TObject.h>
+
+#include <memory>
 
 AtDataReductionTask::AtDataReductionTask() : reduceFunc(nullptr), fInputBranchName("AtRawEvent") {}
 
-AtDataReductionTask::~AtDataReductionTask() {}
+AtDataReductionTask::~AtDataReductionTask() = default;
 
 InitStatus AtDataReductionTask::Init()
 {
    FairRootManager *ioMan = FairRootManager::Instance();
-   if (ioMan == 0) {
+   if (ioMan == nullptr) {
       LOG(fatal) << "Cannot find RootManager!";
       return kFATAL;
    }
 
-   fInputEventArray = (TClonesArray *)ioMan->GetObject(fInputBranchName);
-   if (fInputEventArray == 0) {
+   fInputEventArray = dynamic_cast<TClonesArray *>(ioMan->GetObject(fInputBranchName));
+   if (fInputEventArray == nullptr) {
       LOG(fatal) << "Cannot find AtRawEvent array in branch " << fInputBranchName << "!";
       return kFATAL;
    }

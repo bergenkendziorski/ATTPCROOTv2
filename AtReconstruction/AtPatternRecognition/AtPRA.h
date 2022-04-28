@@ -1,26 +1,36 @@
 #ifndef AtPRA_H
 #define AtPRA_H
 
-#include "AtDigiPar.h"
-#include "AtTrack.h"
-#include "AtHitCluster.h"
-#include "AtEvent.h"
-#include "AtPatternEvent.h"
-#include "AtRansac.h"
+#include <Rtypes.h>  // for Double_t, Float_t, Int_t, THashConsistencyHolder
+#include <TObject.h> // for TObject
 
-// FairRoot classes
-#include "FairRootManager.h"
-#include "FairLogger.h"
-
-// ROOT
-#include "TVirtualFitter.h"
+#include <vector> // for vector
+class AtDigiPar;
+class AtEvent;
+class AtHit;
+class AtPatternEvent;
+class AtTrack;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
 namespace AtPATTERN {
 
 class AtPRA : public TObject {
+protected:
+   AtDigiPar *fPar; ///< parameter container
+
+   Int_t fMaxHits{5000};
+   Int_t fMinHits{0};
+   Float_t fMeanDistance{1e9};
+   Int_t fKNN{5};             //<! Number of nearest neighbors kNN
+   Double_t fStdDevMulkNN{0}; //<! Std dev multiplier for kNN
+   Double_t fkNNDist{10};     //<! Distance threshold for outlier rejection in kNN
+
+   Bool_t kSetPrunning{false}; //<<! Enable prunning of tracks
 
 public:
-   virtual ~AtPRA();
+   virtual ~AtPRA() = default;
    virtual std::vector<AtTrack> GetTrackCand() = 0;
    virtual bool FindTracks(AtEvent &event, AtPatternEvent *patternEvent) = 0;
 
@@ -29,7 +39,7 @@ public:
    void SetMaxHits(Int_t maxHits) { fMaxHits = maxHits; }
    void SetMinHits(Int_t minHits) { fMinHits = minHits; }
    void SetMeanDistance(Float_t meanDistance) { fMeanDistance = meanDistance; }
-   bool kNN(std::vector<AtHit> *hits, AtHit &hit, int k);
+   bool kNN(const std::vector<AtHit> &hits, AtHit &hit, int k);
 
    void SetkNN(Double_t knn) { fKNN = knn; }
    void SetStdDevMulkNN(Double_t stdDevMul) { fStdDevMulkNN = stdDevMul; }
@@ -37,23 +47,11 @@ public:
    void SetPrunning() { kSetPrunning = kTRUE; }
 
 protected:
-   FairLogger *fLogger; ///< logger pointer
-   AtDigiPar *fPar;     ///< parameter container
-
    void SetTrackCurvature(AtTrack &track);
    void Clusterize(AtTrack &track);
    void Clusterize3D(AtTrack &track);
    void Clusterize3D(AtTrack &track, Float_t distance, Float_t radius);
    void ClusterizeSmooth3D(AtTrack &track, Float_t distance, Float_t radius);
-
-   Int_t fMaxHits;
-   Int_t fMinHits;
-   Float_t fMeanDistance;
-   Int_t fKNN;             //<! Number of nearest neighbors kNN
-   Double_t fStdDevMulkNN; //<! Std dev multiplier for kNN
-   Double_t fkNNDist;      //<! Distance threshold for outlier rejection in kNN
-
-   Bool_t kSetPrunning; //<<! Enable prunning of tracks
 
    ClassDef(AtPRA, 1)
 };

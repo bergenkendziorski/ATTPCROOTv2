@@ -1,40 +1,26 @@
 #include "AtTPC_d2He.h"
 
-#include "FairPrimaryGenerator.h"
-#include "FairRootManager.h"
-#include "FairLogger.h"
-#include "FairMCEventHeader.h"
-
-#include "FairIon.h"
-#include "FairParticle.h"
-#include "FairRunSim.h"
-#include "FairRunAna.h"
-
-#include "TDatabasePDG.h"
-#include "TParticlePDG.h"
-#include "TObjArray.h"
-
-#include "TRandom.h"
-#include "TMath.h"
-#include "TLorentzVector.h"
-#include "TVector3.h"
-#include "TGenPhaseSpace.h"
-#include "TVirtualMC.h"
-#include "TParticle.h"
-#include "TClonesArray.h"
-
-#include "FairRunSim.h"
-#include "FairIon.h"
-#include <iostream>
-#include "TParticle.h"
-
-#include "AtStack.h"
 #include "AtVertexPropagator.h"
-#include "AtEulerTransformation.h"
 
-#include "TVector3.h"
+#include <FairIon.h>
+#include <FairParticle.h>
+#include <FairPrimaryGenerator.h>
+#include <FairRunSim.h>
 
-#define amu 931.494
+#include <TDatabasePDG.h>
+#include <TMath.h>
+#include <TMathBase.h>
+#include <TParticle.h>
+#include <TParticlePDG.h>
+#include <TRandom.h>
+#include <TVector3.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <iostream>
+
+constexpr float amu = 931.494;
 
 Int_t AtTPC_d2He::fgNIon = 0;
 
@@ -56,20 +42,18 @@ AtTPC_d2He::AtTPC_d2He(const char *name, std::vector<Int_t> *z, std::vector<Int_
                        Int_t mult, std::vector<Double_t> *px, std::vector<Double_t> *py, std::vector<Double_t> *pz,
                        std::vector<Double_t> *mass, std::vector<Double_t> *Ex, std::vector<Double_t> *cross1,
                        std::vector<Double_t> *cross2, std::vector<Double_t> *cross3, Int_t N_data)
-   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fVx(0.), fVy(0.), fVz(0.), fIon(0)
+   : fPx(0.), fPy(0.), fPz(0.), fMult(mult), fVx(0.), fVy(0.), fVz(0.), fIon(0)
 {
 
    fgNIon++;
-   fMult = mult;
+
    fIon.reserve(fMult);
 
    char buffer[30];
-   TDatabasePDG *pdgDB = TDatabasePDG::Instance();
-   TParticlePDG *kProtonPDG = pdgDB->GetParticle(2212);
-   TParticle *kProton = new TParticle();
+   auto *kProton = new TParticle();
    kProton->SetPdgCode(2212);
 
-   TParticle *kNeutron = new TParticle();
+   auto *kNeutron = new TParticle();
    kNeutron->SetPdgCode(2112);
 
    // Read the cross section table
@@ -100,20 +84,20 @@ AtTPC_d2He::AtTPC_d2He(const char *name, std::vector<Int_t> *z, std::vector<Int_
       if (a->at(i) != 1) {
          IonBuff = new FairIon(buffer, z->at(i), a->at(i), q->at(i), 0.0, mass->at(i) * amu / 1000.0);
          ParticleBuff = new FairParticle("dummyPart", 1, 1, 1.0, 0, 0.0, 0.0);
-         fPType.push_back("Ion");
+         fPType.emplace_back("Ion");
          //          std::cout<<" Adding : "<<buffer<<std::endl;
 
       } else if (a->at(i) == 1 && z->at(i) == 1) {
 
          IonBuff = new FairIon(buffer, z->at(i), a->at(i), q->at(i), 0.0, mass->at(i) * amu / 1000.0);
          ParticleBuff = new FairParticle(2212, kProton);
-         fPType.push_back("Proton");
+         fPType.emplace_back("Proton");
 
       } else if (a->at(i) == 1 && z->at(i) == 0) {
 
          IonBuff = new FairIon(buffer, z->at(i), a->at(i), q->at(i), 0.0, mass->at(i) * amu / 1000.0);
          ParticleBuff = new FairParticle(2112, kNeutron);
-         fPType.push_back("Neutron");
+         fPType.emplace_back("Neutron");
       }
 
       //	       std::cout<<" Z "<<z->at(i)<<" A "<<a->at(i)<<std::endl;
@@ -132,7 +116,7 @@ AtTPC_d2He::AtTPC_d2He(const char *name, std::vector<Int_t> *z, std::vector<Int_
 
       if (fPType.at(i) == "Ion") {
          //                 std::cout<<" In position "<<i<<" adding an : "<<fPType.at(i)<<std::endl;
-         run->AddNewIon(fIon.at(i));
+         run->AddNewIon(fIon.at(i)); // NOLINT
          //		             std::cout<<" fIon name :"<<fIon.at(i)->GetName()<<std::endl;
          //                 std::cout<<" fParticle name :"<<fParticle.at(i)->GetName()<<std::endl;
 
@@ -152,12 +136,6 @@ AtTPC_d2He::AtTPC_d2He(const char *name, std::vector<Int_t> *z, std::vector<Int_
          //                 std::cout<<fParticle.at(i)->GetName()<<std::endl;
       }
    }
-}
-
-// -----   Destructor   ---------------------------------------------------
-AtTPC_d2He::~AtTPC_d2He()
-{
-   // if (fIon) delete fIon;
 }
 
 // Rotation of a 3D vector around an arbitrary axis
@@ -223,16 +201,14 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
    Ang.resize(4);
    Ene.resize(4);
 
-   AtStack *stack = (AtStack *)gMC->GetStack();
-
    fIsDecay = kFALSE;
 
-   fBeamEnergy = gAtVP->GetEnergy();
-   std::cout << " -I- AtTPC_d2He Residual energy  : " << gAtVP->GetEnergy() << std::endl;
+   fBeamEnergy = AtVertexPropagator::Instance()->GetEnergy();
+   std::cout << " -I- AtTPC_d2He Residual energy  : " << AtVertexPropagator::Instance()->GetEnergy() << std::endl;
 
-   fPxBeam = gAtVP->GetPx();
-   fPyBeam = gAtVP->GetPy();
-   fPzBeam = gAtVP->GetPz();
+   fPxBeam = AtVertexPropagator::Instance()->GetPx();
+   fPyBeam = AtVertexPropagator::Instance()->GetPy();
+   fPzBeam = AtVertexPropagator::Instance()->GetPz();
 
    // fPxBeam = fPx.at(0) ;
    // fPyBeam = fPy.at(0) ;
@@ -240,10 +216,10 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
 
    if (fBeamEnergy == 0) {
       std::cout << "-I- AtTP_d2He : No solution!" << std::endl;
-      gAtVP->SetValidKine(kFALSE);
+      AtVertexPropagator::Instance()->SetValidKine(kFALSE);
    }
 
-   if (!gAtVP->GetValidKine()) {
+   if (!AtVertexPropagator::Instance()->GetValidKine()) {
 
       fPx.at(2) = 0.; // To GeV for FairRoot
       fPy.at(2) = 0.;
@@ -498,14 +474,15 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
 
    } // if solution is valid
 
-   Double_t phi7 = atan2(p7L[1], p7L[0]) * TMath::RadToDeg();
-   if (phi7 < 0)
-      phi7 = (phi7 + 360.0);
+   /*
+      Double_t phi7 = atan2(p7L[1], p7L[0]) * TMath::RadToDeg();
+      if (phi7 < 0)
+         phi7 = (phi7 + 360.0);
 
-   Double_t phi8 = atan2(p8L[1], p8L[0]) * TMath::RadToDeg();
-   if (phi8 < 0)
-      phi8 = (phi8 + 360.0);
-
+      Double_t phi8 = atan2(p8L[1], p8L[0]) * TMath::RadToDeg();
+      if (phi8 < 0)
+         phi8 = (phi8 + 360.0);
+   */
    /*std::cout << " -I- ===== AtTPC_d2He - Kinematics ====== "<<Ex_ejectile<<std::endl;
    std::cout << " Scattered energy:" << Ene.at(0)  << " MeV" << std::endl;
    std::cout << " Scattered  angle:"  << Ang.at(0) << " deg" << std::endl;
@@ -518,16 +495,16 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
    std::cout << " 2He kinetic energy:"  <<  Ene.at(1) << " MeV" << std::endl;
    std::cout << " 2He lab angle:"  <<  Ang.at(1) << " deg" << std::endl;*/
 
-   gAtVP->SetBURes2E(Ene.at(3));
-   gAtVP->SetBURes2A(Ang.at(3));
-   gAtVP->SetRecoilE(Ene.at(2));
-   gAtVP->SetRecoilA(Ang.at(2));
-   gAtVP->SetScatterE(Ene.at(0));
-   gAtVP->SetScatterA(Ang.at(0));
+   AtVertexPropagator::Instance()->SetTrackEnergy(1, Ene.at(0));
+   AtVertexPropagator::Instance()->SetTrackAngle(1, Ang.at(0));
+   AtVertexPropagator::Instance()->SetTrackEnergy(2, Ene.at(2));
+   AtVertexPropagator::Instance()->SetTrackAngle(2, Ang.at(2));
+   AtVertexPropagator::Instance()->SetTrackEnergy(3, Ene.at(3));
+   AtVertexPropagator::Instance()->SetTrackAngle(3, Ang.at(3));
 
    TVector3 ScatP(fPx.at(2), fPy.at(2), fPz.at(2));
-   gAtVP->SetScatterP(ScatP);
-   gAtVP->SetScatterEx(Ex_ejectile);
+   AtVertexPropagator::Instance()->SetScatterP(ScatP);
+   AtVertexPropagator::Instance()->SetScatterEx(Ex_ejectile);
 
    /*
        do{
@@ -538,7 +515,7 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
 
        }while(  fabs(random_r) > 4.7 ); //cut at 2 sigma
    */
-   TVector3 d2HeVtx = gAtVP->Getd2HeVtx();
+   TVector3 d2HeVtx = AtVertexPropagator::Instance()->Getd2HeVtx();
    fVx = d2HeVtx.X();
    fVy = d2HeVtx.Y();
    fVz = d2HeVtx.Z();
@@ -571,21 +548,23 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
 
       // Propagate the vertex of the previous event
 
-      // fVx = gAtVP->GetVx();
-      // fVy = gAtVP->GetVy();
-      // fVz = gAtVP->GetVz();
+      // fVx = AtVertexPropagator::Instance()->GetVx();
+      // fVy = AtVertexPropagator::Instance()->GetVy();
+      // fVz = AtVertexPropagator::Instance()->GetVz();
 
       /*
              fVx = random_r*cos(random_phi);
              fVy = random_r*sin(random_phi);
              fVz =  random_z;
       */
-      // cout<<gAtVP->GetVx(); <<" "<<gAtVP->GetVy();<<" "<<gAtVP->GetVz();<<" "<<endl;
+      // cout<<AtVertexPropagator::Instance()->GetVx(); <<" "<<AtVertexPropagator::Instance()->GetVy();<<"
+      // "<<AtVertexPropagator::Instance()->GetVz();<<" "<<endl;
 
       // TVector3 d2HeVtx(fVx,fVy,fVz);
-      gAtVP->Setd2HeVtx(d2HeVtx);
+      AtVertexPropagator::Instance()->Setd2HeVtx(d2HeVtx);
 
-      if (i > 1 && i != 3 && gAtVP->GetDecayEvtCnt() && pdgType != 1000500500 && fPType.at(i) == "Ion") {
+      if (i > 1 && i != 3 && AtVertexPropagator::Instance()->GetDecayEvtCnt() && pdgType != 1000500500 &&
+          fPType.at(i) == "Ion") {
          // TODO: Dirty way to propagate only the products (0 and 1 are beam and target respectively)
          // i=3 is excluded because  corresponds to 2He
          /*			            std::cout << "-I- FairIonGenerator: Generating ions of type "
@@ -596,7 +575,8 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
 
          primGen->AddTrack(pdgType, fPx.at(i), fPy.at(i), fPz.at(i), fVx, fVy, fVz);
 
-      } else if (i > 1 && i != 3 && gAtVP->GetDecayEvtCnt() && pdgType == 2212 && fPType.at(i) == "Proton") {
+      } else if (i > 1 && i != 3 && AtVertexPropagator::Instance()->GetDecayEvtCnt() && pdgType == 2212 &&
+                 fPType.at(i) == "Proton") {
 
          /*  			      std::cout << "-I- FairIonGenerator: Generating ions of type "
            << fParticle.at(i)->GetName() << " (PDG code " << pdgType << ")" << std::endl;
@@ -607,7 +587,8 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
          // primGen->AddTrack(pdgType, fPx.at(i), fPy.at(i), fPz.at(i), fVx, fVy, fVz);
          primGen->AddTrack(pdgType, fPx.at(i), fPy.at(i), fPz.at(i), fVx, fVy, fVz);
 
-      } else if (i > 1 && i != 3 && gAtVP->GetDecayEvtCnt() && pdgType == 2112 && fPType.at(i) == "Neutron") {
+      } else if (i > 1 && i != 3 && AtVertexPropagator::Instance()->GetDecayEvtCnt() && pdgType == 2112 &&
+                 fPType.at(i) == "Neutron") {
 
          /*         std::cout << "-I- FairIonGenerator: Generating ions of type "
          << fParticle.at(i)->GetName() << " (PDG code " << pdgType << ")" << std::endl;
@@ -619,7 +600,8 @@ Bool_t AtTPC_d2He::ReadEvent(FairPrimaryGenerator *primGen)
       }
    }
 
-   gAtVP->IncDecayEvtCnt(); // TODO: Okay someone should put a more suitable name but we are on a hurry...
+   AtVertexPropagator::Instance()
+      ->IncDecayEvtCnt(); // TODO: Okay someone should put a more suitable name but we are on a hurry...
 
    return kTRUE;
 }

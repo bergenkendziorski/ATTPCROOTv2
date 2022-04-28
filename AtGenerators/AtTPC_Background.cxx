@@ -1,40 +1,22 @@
 #include "AtTPC_Background.h"
 
-#include "FairPrimaryGenerator.h"
-#include "FairRootManager.h"
-#include "FairLogger.h"
-#include "FairMCEventHeader.h"
-
-#include "FairIon.h"
-#include "FairParticle.h"
-#include "FairRunSim.h"
-#include "FairRunAna.h"
-
-#include "TDatabasePDG.h"
-#include "TParticlePDG.h"
-#include "TObjArray.h"
-
-#include "TRandom.h"
-#include "TMath.h"
-#include "TLorentzVector.h"
-#include "TVector3.h"
-#include "TGenPhaseSpace.h"
-#include "TVirtualMC.h"
-#include "TParticle.h"
-#include "TClonesArray.h"
-
-#include "FairRunSim.h"
-#include "FairIon.h"
-#include <iostream>
-#include "TParticle.h"
-
-#include "AtStack.h"
 #include "AtVertexPropagator.h"
-#include "AtEulerTransformation.h"
 
-#include "TVector3.h"
+#include <FairIon.h>
+#include <FairParticle.h>
+#include <FairPrimaryGenerator.h>
+#include <FairRunSim.h>
 
-#define amu 931.494
+#include <TMath.h>
+#include <TParticle.h>
+#include <TRandom.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <iostream>
+
+constexpr float amu = 931.494;
 
 Int_t AtTPC_Background::fgNIon = 0;
 
@@ -49,17 +31,15 @@ AtTPC_Background::AtTPC_Background(const char *name, std::vector<Int_t> *z, std:
                                    std::vector<Int_t> *q, Int_t mult, std::vector<Double_t> *px,
                                    std::vector<Double_t> *py, std::vector<Double_t> *pz, std::vector<Double_t> *mass,
                                    std::vector<Double_t> *Ex)
-   : fMult(0), fPx(0.), fPy(0.), fPz(0.), fVx(0.), fVy(0.), fVz(0.), fIon(0)
+   : fPx(0.), fPy(0.), fPz(0.), fMult(mult), fVx(0.), fVy(0.), fVz(0.), fIon(0)
 {
 
    fgNIon++;
-   fMult = mult;
+
    fIon.reserve(fMult);
 
    char buffer[30];
-   TDatabasePDG *pdgDB = TDatabasePDG::Instance();
-   TParticlePDG *kProtonPDG = pdgDB->GetParticle(2212);
-   TParticle *kProton = new TParticle();
+   auto *kProton = new TParticle();
    kProton->SetPdgCode(2212);
 
    for (Int_t i = 0; i < fMult; i++) {
@@ -77,14 +57,14 @@ AtTPC_Background::AtTPC_Background(const char *name, std::vector<Int_t> *z, std:
       if (a->at(i) != 1) {
          IonBuff = new FairIon(buffer, z->at(i), a->at(i), q->at(i), 0.0, mass->at(i) * amu / 1000.0);
          ParticleBuff = new FairParticle("dummyPart", 1, 1, 1.0, 0, 0.0, 0.0);
-         fPType.push_back("Ion");
+         fPType.emplace_back("Ion");
          std::cout << " Adding : " << buffer << std::endl;
 
       } else if (a->at(i) == 1 && z->at(i) == 1) {
 
          IonBuff = new FairIon(buffer, z->at(i), a->at(i), q->at(i), 0.0, mass->at(i) * amu / 1000.0);
          ParticleBuff = new FairParticle(2212, kProton);
-         fPType.push_back("Proton");
+         fPType.emplace_back("Proton");
       }
 
       std::cout << " Z " << z->at(i) << " A " << a->at(i) << std::endl;
@@ -103,24 +83,18 @@ AtTPC_Background::AtTPC_Background(const char *name, std::vector<Int_t> *z, std:
 
       if (fPType.at(i) == "Ion") {
          std::cout << " In position " << i << " adding an : " << fPType.at(i) << std::endl;
-         run->AddNewIon(fIon.at(i));
+         run->AddNewIon(fIon.at(i)); // NOLINT
          std::cout << " fIon name :" << fIon.at(i)->GetName() << std::endl;
          std::cout << " fParticle name :" << fParticle.at(i)->GetName() << std::endl;
 
       } else if (fPType.at(i) == "Proton") {
          std::cout << " In position " << i << " adding an : " << fPType.at(i) << std::endl;
-         run->AddNewParticle(fParticle.at(i));
+         run->AddNewParticle(fParticle.at(i)); // NOLINT
          std::cout << " fIon name :" << fIon.at(i)->GetName() << std::endl;
          std::cout << " fParticle name :" << fParticle.at(i)->GetName() << std::endl;
          std::cout << fParticle.at(i)->GetName() << std::endl;
       }
    }
-}
-
-// -----   Destructor   ---------------------------------------------------
-AtTPC_Background::~AtTPC_Background()
-{
-   // if (fIon) delete fIon;
 }
 
 Double_t AtTPC_Background::omega(Double_t x, Double_t y, Double_t z)
@@ -195,13 +169,13 @@ Double_t *AtTPC_Background::TwoB(Double_t m1b, Double_t m2b, Double_t m3b, Doubl
       AtTPC_Background::omega(s, pow(m1b, 2), pow(m2b, 2)) * AtTPC_Background::omega(s, pow(m3b, 2), pow(m4b, 2));
 
    double Et3 = (c * cos((180. - thetacm) * 3.1415926535 / 180) - b) / a; // estamos viendo el recoil en cm (pi-theta)
-   double Et4 = (Et1 + m2b - Et3);
+   // double Et4 = (Et1 + m2b - Et3);
 
    double K3 = Et3 - m3b;
-   double K4 = Et4 - m4b;
+   // double K4 = Et4 - m4b;
 
    //------------------Mandestam variables
-   t = pow(m2b, 2) + pow(m4b, 2) - 2 * m2b * Et4;
+   // t = pow(m2b, 2) + pow(m4b, 2) - 2 * m2b * Et4;
    u = pow(m2b, 2) + pow(m3b, 2) - 2 * m2b * Et3;
 
    double theta_lab = acos(
@@ -257,12 +231,12 @@ std::vector<Double_t> AtTPC_Background::BreakUp(std::vector<Double_t> *Pdeuteron
    ppL[0] = pprest[0];
    ppL[1] = pprest[1];
    ppL[2] = gammad * (pprest[2] + betad * Eprest);
-   double EpL = sqrt(pow(mp, 2) + pow(ppL[0], 2) + pow(ppL[1], 2) + pow(ppL[2], 2));
+   // double EpL = sqrt(pow(mp, 2) + pow(ppL[0], 2) + pow(ppL[1], 2) + pow(ppL[2], 2));
 
    pnL[0] = pnrest[0];
    pnL[1] = pnrest[1];
    pnL[2] = gammad * (pnrest[2] + betad * Enrest);
-   double EnL = sqrt(pow(mn, 2) + pow(pnL[0], 2) + pow(pnL[1], 2) + pow(pnL[2], 2));
+   // double EnL = sqrt(pow(mn, 2) + pow(pnL[0], 2) + pow(pnL[1], 2) + pow(pnL[2], 2));
 
    // rotate to the 2H direction
    std::vector<double> fvfrom(3);
@@ -292,16 +266,14 @@ std::vector<Double_t> AtTPC_Background::BreakUp(std::vector<Double_t> *Pdeuteron
 Bool_t AtTPC_Background::ReadEvent(FairPrimaryGenerator *primGen)
 {
 
-   AtStack *stack = (AtStack *)gMC->GetStack();
-
    fIsDecay = kFALSE;
 
-   fBeamEnergy = gAtVP->GetEnergy();
-   std::cout << " -I- AtTPC_Background Residual energy  : " << gAtVP->GetEnergy() << std::endl;
+   fBeamEnergy = AtVertexPropagator::Instance()->GetEnergy();
+   std::cout << " -I- AtTPC_Background Residual energy  : " << AtVertexPropagator::Instance()->GetEnergy() << std::endl;
 
-   fPxBeam = gAtVP->GetPx();
-   fPyBeam = gAtVP->GetPy();
-   fPzBeam = gAtVP->GetPz();
+   fPxBeam = AtVertexPropagator::Instance()->GetPx();
+   fPyBeam = AtVertexPropagator::Instance()->GetPy();
+   fPzBeam = AtVertexPropagator::Instance()->GetPz();
 
    // fPxBeam = fPx.at(0) ;
    // fPyBeam = fPy.at(0) ;
@@ -309,10 +281,10 @@ Bool_t AtTPC_Background::ReadEvent(FairPrimaryGenerator *primGen)
 
    if (fBeamEnergy == 0) {
       std::cout << "-I- AtTP_Background : No solution!" << std::endl;
-      gAtVP->SetValidKine(kFALSE);
+      AtVertexPropagator::Instance()->SetValidKine(kFALSE);
    }
 
-   if (!gAtVP->GetValidKine()) {
+   if (!AtVertexPropagator::Instance()->GetValidKine()) {
 
       fPx.at(2) = 0.; // To GeV for FairRoot
       fPy.at(2) = 0.;
@@ -468,7 +440,7 @@ fPz.at(3) = (Prec*cos(angrec) )/1000.0; // To GeV for FairRoot
       fVy = random_r * sin(random_phi);
       fVz = 100.0 * (gRandom->Uniform()); // cm
 
-      if (i > 1 && gAtVP->GetDecayEvtCnt() && pdgType == 2212) {
+      if (i > 1 && AtVertexPropagator::Instance()->GetDecayEvtCnt() && pdgType == 2212) {
          // TODO: Dirty way to propagate only the products (0 and 1 are beam and target respectively)
 
          // std::cout << "-I- FairIonGenerator: Generating ions of type "
@@ -480,7 +452,8 @@ fPz.at(3) = (Prec*cos(angrec) )/1000.0; // To GeV for FairRoot
       }
    }
 
-   gAtVP->IncDecayEvtCnt(); // TODO: Okay someone should put a more suitable name but we are on a hurry...
+   AtVertexPropagator::Instance()
+      ->IncDecayEvtCnt(); // TODO: Okay someone should put a more suitable name but we are on a hurry...
 
    return kTRUE;
 }
