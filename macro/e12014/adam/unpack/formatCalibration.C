@@ -5,12 +5,12 @@
 using namespace std;
 void formatCalibration()
 {
-   ifstream calFile("output/filtered/calibration.csv");
+   ifstream calFile("output/filteredBaseline/calibration.csv");
    if (!calFile.is_open()) {
       cout << "Can't open input calibration file" << endl;
    }
 
-   ofstream outFile("output/filtered/calibrationFormated.txt");
+   ofstream outFile("output/filteredBaseline/calibrationFormated.txt");
    if (!outFile.is_open()) {
       cout << "Can't open output calibration file" << endl;
    }

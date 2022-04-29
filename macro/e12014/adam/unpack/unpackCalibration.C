@@ -95,7 +95,7 @@ void unpackCalibration(int runNumber)
    run->AddTask(fftTask);
 
    auto *filterCalRaw = new AtFilterCalibrate();
-   filterCalRaw->SetCalibrationFile("output/filtered/calibrationFormated.txt");
+   filterCalRaw->SetCalibrationFile("output/filteredBaseline/calibrationFormated.txt");
    auto *calFFTTask = new AtFilterTask(filterCalRaw);
    calFFTTask->SetPersistence(true);
    calFFTTask->SetFilterAux(false);
@@ -128,7 +128,7 @@ void unpackCalibration(int runNumber)
    auto numEvents = unpackTask->GetNumEvents();
 
    // numEvents = 1700;//217;
-   // numEvents = 20;
+   numEvents = 20;
 
    std::cout << "Unpacking " << numEvents << " events. " << std::endl;
 
