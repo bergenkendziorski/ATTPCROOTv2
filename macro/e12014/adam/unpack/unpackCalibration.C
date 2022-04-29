@@ -17,7 +17,7 @@ void unpackCalibration(int runNumber)
 
    // Set the in/out files
    TString inputFile = inputDir + TString::Format("/run_%04d.h5", runNumber);
-   TString outputFile = outDir + TString::Format("/run_%04dCal.root", runNumber);
+   TString outputFile = outDir + TString::Format("/run_%04d.root", runNumber);
 
    std::cout << "Unpacking run " << runNumber << " from: " << inputFile << std::endl;
    std::cout << "Saving in: " << outputFile << std::endl;
@@ -46,11 +46,12 @@ void unpackCalibration(int runNumber)
    std::cout << "Setting par file: " << digiParFile << std::endl;
    parIo1->open(digiParFile.Data(), "in");
    rtdb->setSecondInput(parIo1);
+   rtdb->getContainer("AtDigiPar");
 
    // Create the detector map
    auto mapping = std::make_shared<AtTpcMap>();
    mapping->ParseXMLMap(mapDir.Data());
-   mapping->GenerateAtTpc();
+   mapping->GeneratePadPlane();
 
    /**** Should not have to change code between this line and the above star comment ****/
    mapping->AddAuxPad({10, 0, 0, 0}, "MCP_US");
@@ -59,48 +60,72 @@ void unpackCalibration(int runNumber)
    mapping->AddAuxPad({10, 0, 2, 34}, "IC");
 
    // Create the unpacker task
-   AtHDFParserTask *HDFParserTask = new AtHDFParserTask();
-   HDFParserTask->SetPersistence(kTRUE);
-   HDFParserTask->SetMap(mapping);
-   HDFParserTask->SetFileName(inputFile.Data());
-   HDFParserTask->SetOldFormat(false);
-   HDFParserTask->SetNumberTimestamps(2);
-   HDFParserTask->SetBaseLineSubtraction(kTRUE);
+   auto unpacker = std::make_unique<AtHDFUnpacker>(mapping);
+   unpacker->SetInputFileName(inputFile.Data());
+   unpacker->SetNumberTimestamps(2);
+   unpacker->SetBaseLineSubtraction(true);
 
-   AtFilterSubtraction *filterSub = new AtFilterSubtraction(mapping);
-   filterSub->SetThreshold(45);
-   AtFilterTask *subTask = new AtFilterTask(filterSub);
-   subTask->SetPersistence(kFALSE);
-   subTask->SetFilterAux(true);
-   subTask->SetOutputBranch("AtRawEventSub");
+   auto unpackTask = new AtUnpackTask(std::move(unpacker));
+   unpackTask->SetPersistence(true);
+   run->AddTask(unpackTask);
 
-   AtFilterCalibrate *filterCal = new AtFilterCalibrate();
-   filterCal->SetCalibrationFile("calibrationFormated.txt");
-   AtFilterTask *calTask = new AtFilterTask(filterCal);
-   calTask->SetPersistence(kTRUE);
-   calTask->SetFilterAux(false);
-   calTask->SetInputBranch("AtRawEventSub");
+   /***** Calibrate raw data ****/
+   AtFilterCalibrate *calRawFilter = new AtFilterCalibrate();
+   calRawFilter->SetCalibrationFile("output/raw/calibrationFormated.txt");
+   AtFilterTask *calRawTask = new AtFilterTask(calRawFilter);
+   calRawTask->SetPersistence(true);
+   calRawTask->SetFilterAux(false);
+   calRawTask->SetInputBranch("AtRawEvent");
+   calRawTask->SetOutputBranch("AtRawEventCal");
+   run->AddTask(calRawTask);
+
+   /***** Calibrate FFT data ****/
+   auto *filterFFT = new AtFilterFFT();
+   filterFFT->SetSaveTransform(false);
+   filterFFT->AddFreqRange({0, 0.4, 1, 0.95});
+   filterFFT->AddFreqRange({1, 0.95, 4, 1});
+   filterFFT->AddFreqRange({4, 1, 25, 1});
+   filterFFT->AddFreqRange({25, 1, 90, 0.7});
+   filterFFT->AddFreqRange({90, 0.7, 257, 0.7});
+   AtFilterTask *fftTask = new AtFilterTask(filterFFT);
+   fftTask->SetPersistence(true);
+   fftTask->SetFilterAux(false);
+   fftTask->SetInputBranch("AtRawEvent");
+   fftTask->SetOutputBranch("AtRawEventFFT");
+   run->AddTask(fftTask);
+
+   auto *filterCalRaw = new AtFilterCalibrate();
+   filterCalRaw->SetCalibrationFile("output/filtered/calibrationFormated.txt");
+   auto *calFFTTask = new AtFilterTask(filterCalRaw);
+   calFFTTask->SetPersistence(true);
+   calFFTTask->SetFilterAux(false);
+   calFFTTask->SetInputBranch("AtRawEventFFT");
+   calFFTTask->SetOutputBranch("AtRawEventFFTCal");
+   run->AddTask(calFFTTask);
 
    AtPSASimple2 *psa = new AtPSASimple2();
    psa->SetThreshold(45);
    psa->SetMaxFinder();
 
-   // Create PSA task for calibrated data
-   AtPSAtask *psaTask = new AtPSAtask(psa);
-   psaTask->SetInputBranch("AtRawEventFiltered");
-   psaTask->SetOutputBranch("AtEventFiltered");
-   psaTask->SetPersistence(kTRUE);
+   /**** PSA For raw data ****/
+   AtPSAtask *psaRawTask = new AtPSAtask(psa);
+   psaRawTask->SetInputBranch("AtRawEventCal");
+   psaRawTask->SetOutputBranch("AtEventCal");
+   psaRawTask->SetPersistence(true);
+   run->AddTask(psaRawTask);
 
+   /**** PSA For FFT data ****/
+   AtPSAtask *psaFFTTask = new AtPSAtask(psa);
+   psaFFTTask->SetInputBranch("AtRawEventFFTCal");
+   psaFFTTask->SetOutputBranch("AtEventFFTCal");
+   psaFFTTask->SetPersistence(true);
+   run->AddTask(psaFFTTask);
    // Add unpacker to the run
-   run->AddTask(HDFParserTask);
-   run->AddTask(subTask);
-   run->AddTask(calTask);
-   run->AddTask(psaTask);
 
    run->Init();
 
    // Get the number of events and unpack the whole run
-   auto numEvents = HDFParserTask->GetNumEvents() / 2;
+   auto numEvents = unpackTask->GetNumEvents();
 
    // numEvents = 1700;//217;
    // numEvents = 20;

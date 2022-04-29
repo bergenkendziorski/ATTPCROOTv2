@@ -1,24 +1,27 @@
 #include <fstream>
 #include <iostream>
 
+#include "/mnt/simulations/attpcroot/adam/ATTPCROOTv2/AtTools/AtCSVReader.h"
 using namespace std;
 void formatCalibration()
 {
-   ifstream calFile("output/calibration.csv");
+   ifstream calFile("output/filtered/calibration.csv");
    if (!calFile.is_open()) {
       cout << "Can't open input calibration file" << endl;
    }
 
-   ofstream outFile("output/calibrationFormated.txt");
+   ofstream outFile("output/filtered/calibrationFormated.txt");
    if (!outFile.is_open()) {
       cout << "Can't open output calibration file" << endl;
    }
-
-   while (!calFile.eof()) {
-      int padNum;
-      float a, b, c, d;
-      char t1, t2;
-      calFile >> padNum >> t1 >> a >> t2 >> b;
-      outFile << padNum << "\t" << 0 << "\t" << b << endl;
+   if (!calFile || !outFile)
+      return;
+   for (auto &row : CSVRange<double>(calFile)) {
+      int padNum = row[0];
+      double b = row[1];
+      double gain = row[2];
+      if (gain < 0.4)
+         gain *= 3.663;
+      outFile << padNum << "\t" << 0 << "\t" << gain << endl;
    }
 }

@@ -114,8 +114,19 @@ void fillHistograms()
    while (nextEvent()) {
       std::cout << "Looking at event: " << reader->GetCurrentEntry() << std::endl;
 
-      for (const auto &hit : (eventPtr->GetHitArray()))
-         fillPad(hit.GetPadNum(), hit.GetCharge());
+      for (const auto &hit : (eventPtr->GetHitArray())) {
+
+         auto charge = hit.GetCharge();
+         auto padNum = hit.GetPadNum();
+         double baseLine = 0;
+         for (int i = 0; i < 20; ++i)
+            baseLine += rawEventPtr->GetPad(padNum)->GetADC(i);
+         baseLine /= 20;
+         fillPad(padNum, charge - baseLine);
+      }
+      /*      for (const auto &hit : (eventPtr->GetHitArray()))
+               fillPad(hit.GetPadNum(), hit.GetCharge());
+      */
    }
 }
 
@@ -230,7 +241,7 @@ void fitGraphs()
       fitParameters[padNum].emplace_back(fit->Parameter(0));
       fitParameters[padNum].emplace_back(fit->Parameter(1));
       fitChi2[padNum] = fit->Chi2() / fit->Ndf();
-      fitChi2[padNum] = graph->GetCorrelationFactor();
+      // fitChi2[padNum] = graph->GetCorrelationFactor();
    }
 }
 void saveCalibration()
