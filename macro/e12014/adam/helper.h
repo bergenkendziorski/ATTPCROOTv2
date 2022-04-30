@@ -144,7 +144,9 @@ bool nextEvent()
    rawEventPtr = dynamic_cast<AtRawEvent *>((*rawEventReader)->At(0));
    eventPtr = dynamic_cast<AtEvent *>((*eventReader)->At(0));
    if (eventFilteredReader != nullptr)
-      rawEventFilteredPtr = dynamic_cast<AtRawEvent *>((*eventFilteredReader)->At(0));
+      eventFilteredPtr = dynamic_cast<AtEvent *>((*eventFilteredReader)->At(0));
+   if (rawEventFilteredReader != nullptr)
+      rawEventFilteredPtr = dynamic_cast<AtRawEvent *>((*rawEventFilteredReader)->At(0));
    if (ransacReader != nullptr)
       ransacPtr = dynamic_cast<AtRANSACN::AtRansac *>((*ransacReader)->At(0));
 
