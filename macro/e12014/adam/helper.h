@@ -78,6 +78,8 @@ void loadRun(TString filePath, TString rawEventBranchName, TString rawEventFilte
 
    if (eventReader != nullptr)
       delete eventReader;
+   if (tpcTree->GetBranch(eventBranchName) == nullptr)
+      LOG(error) << "Could not find event branch";
    eventReader = new TTreeReaderValue<TClonesArray>(*reader, eventBranchName);
 
    if (eventFilteredReader != nullptr)
