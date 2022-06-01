@@ -15,6 +15,12 @@ class TBuffer;
 class TClass;
 class TMemberInspector;
 
+/**
+ * @brief Point in space with charge.
+ *
+ * A hit describes a point in the detector where charge was deposited, It is the output
+ * of a PSA method.
+ */
 class AtHit : public TObject {
 public:
    using XYZPoint = ROOT::Math::XYZPoint;
@@ -93,6 +99,8 @@ public:
       }
    };
 
+protected:
+   XYZVector byElementMult(const &XYZVector a, const &XYZVector b);
    ClassDef(AtHit, 5);
 };
 
