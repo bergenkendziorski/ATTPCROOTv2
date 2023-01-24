@@ -53,5 +53,6 @@
 #pragma link C++ class AtHDF5WriteTask + ;
 #pragma link C++ class AtHDF5ReadTask + ;
 #pragma link C++ class AtCopyTreeTask + ;
+#pragma link C++ class AtLinkDAQTask + ;
 
 #endif
