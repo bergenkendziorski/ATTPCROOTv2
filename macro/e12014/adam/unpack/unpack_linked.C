@@ -83,7 +83,7 @@ void unpack_linked(int tpcRunNum = 206)
    AtDataReductionTask *reduceTask = new AtDataReductionTask();
    reduceTask->SetInputBranch("AtRawEvent");
    TxtEvents events;
-   events.AddTxtFile(TString::Format(sharedInfoDir + "/labeledEventRuns/fissionEventsRun_%04d", tpcRunNum).Data());
+   events.AddTxtFile(TString::Format(sharedInfoDir + "/EventLabels/fissionEventsRun_%04d", tpcRunNum).Data());
    reduceTask->SetReductionFunction(events);
    run->AddTask(reduceTask);
 
