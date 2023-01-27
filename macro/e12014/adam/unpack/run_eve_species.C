@@ -69,6 +69,12 @@ void run_eve_species(TString species, int pressure = 150, TString OutputDataFile
    eveMan->AddTab(std::move(tabPad));
    eveMan->AddTab(std::move(tabMac));
 
+   auto psa = std::make_unique<AtPSAMax>();
+   psa->SetThreshold(0);
+   AtPSAtask *psaTask = new AtPSAtask(std::move(psa));
+   psaTask->SetInputBranch("AtRawEventSub");
+   eveMan->AddTask(psaTask);
+
    eveMan->Init();
 
    std::cout << "Finished init" << std::endl;

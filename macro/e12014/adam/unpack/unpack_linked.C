@@ -101,10 +101,12 @@ void unpack_linked(int tpcRunNum = 206)
 
    auto filterSub = new AtFilterSubtraction(mapping);
    filterSub->SetThreshold(threshold);
+   filterSub->SetIsGood(false); // Save events event if
    AtFilterTask *subTask = new AtFilterTask(filterSub);
    subTask->SetPersistence(true);
    subTask->SetFilterAux(true);
    subTask->SetOutputBranch("AtRawEventSub");
+
    run->AddTask(subTask);
 
    auto psa = std::make_unique<AtPSAMax>();
