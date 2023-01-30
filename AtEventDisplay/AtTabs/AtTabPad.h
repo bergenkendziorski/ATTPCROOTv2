@@ -15,8 +15,10 @@
 class TEveWindowSlot;
 class TBuffer;
 class TClass;
+class TPad;
 class TMemberInspector;
 class AtPad;
+class AtHit;
 class TH1D;
 namespace DataHandling {
 class AtSubject;
@@ -36,6 +38,8 @@ protected:
    std::unordered_map<Int_t, std::string> fAugNames;                   //< Augment and Aux pad names
    DataHandling::AtPadNum *fPadNum;
 
+   std::set<Int_t> fDrawHits; //< Draw representation of hits on trace in these TPads
+
 public:
    AtTabPad(int nRow = 1, int nCol = 1, TString name = "AtPad");
    ~AtTabPad();
@@ -48,6 +52,12 @@ public:
    void DrawArrayAug(TString augName, int row = 0, int col = 0); //< Draw an array augment current pad
    void DrawAuxADC(TString auxName, int row = 0, int col = 0);   //< Draw an aux pad
 
+   /// If called will draw a pictoral representation of the hit on the corresponding pad. Requires a
+   /// parameter file "AtDigiPar" be added to the runtime DB.
+   /// If the hit has a non-zero Z variance, it will draw a gaussian with integral Q.
+   /// If the hit has a zero variance will draw a point at (z,Q).
+   void DrawHits(int row = 0, int col = 0);
+
 protected:
    void MakeTab(TEveWindowSlot *) override;
 
@@ -57,6 +67,8 @@ private:
    void DrawAdc(TH1D *hist, const AtPad &pad);
    void DrawRawAdc(TH1D *hist, const AtPad &pad);
    void DrawArrayAug(TH1D *hist, const AtPad &pad, TString augName);
+   void DrawHit(const AtPad &pad);
+   // void DrawHit(TPad *canv, const AtHit &hit);
 
    void UpdateCvsPad();
 

@@ -1,6 +1,7 @@
 #include "AtTabPad.h"
 
 #include "AtAuxPad.h" // for AtAuxPad
+#include "AtDigiPar.h"
 #include "AtEvent.h"
 #include "AtPad.h"
 #include "AtPadArray.h"
@@ -10,8 +11,11 @@
 #include "AtViewerManager.h"
 
 #include <FairLogger.h>
+#include <FairRun.h>
+#include <FairRuntimeDb.h>
 
 #include <TCanvas.h>
+#include <TF1.h>
 #include <TH1.h> // for TH1D
 
 #include <iostream> // for operator<<, basic_ostream::operator<<
@@ -126,6 +130,8 @@ void AtTabPad::DrawPad()
             DrawAdc(hist, *auxPad);
          break;
       }
+      if (fDrawHits.find(pos) != fDrawHits.end())
+         DrawHit(*fPad);
    }
 
    UpdateCvsPad();
@@ -159,6 +165,53 @@ void AtTabPad::DrawArrayAug(TH1D *hist, const AtPad &pad, TString augName)
    hist->Draw();
 }
 
+void AtTabPad::DrawHit(const AtPad &pad)
+{
+   // Loop through all hits and
+   auto event = GetFairRootInfo<AtEvent>();
+   for (auto &hit : event->GetHits())
+      if (hit->GetPadNum() == pad.GetPadNum()) {
+
+         // Draw the hit
+         auto Q = hit->GetCharge();
+         auto z = hit->GetPosition().Z();
+         auto zSig = hit->GetPositionSigma().Z();
+         if (zSig == 0)
+            LOG(error) << "Hits that are points (sig_z = 0) are not supported yet!";
+
+         // position in mm to TB.
+         auto fPar = dynamic_cast<AtDigiPar *>(FairRun::Instance()->GetRuntimeDb()->getContainer("AtDigiPar"));
+
+         if (fPar == nullptr) {
+            LOG(error) << "Could not find the digipar file!";
+            return;
+         }
+
+         // Get pad plane position in TB
+         auto totalDriftTime = fPar->GetZPadPlane() / (fPar->GetDriftVelocity() * 10.);
+         auto totalDriftTimeTB = totalDriftTime / (fPar->GetTBTime() / 1000.);
+         auto padPlaneTB = fPar->GetTBEntrance() - totalDriftTimeTB;
+
+         // Get drift time in TB
+         auto driftTime = z / (fPar->GetDriftVelocity() * 10.);  // driftTime in us (z in mm, vel in cm/us)
+         auto driftTB = driftTime / (fPar->GetTBTime() / 1000.); // time in us. TBTime in ns.
+
+         // Get the TB corresponding to the hit
+         auto zTB = driftTB + padPlaneTB;
+         // Get the variance in TB corresponding to the hitarray
+         auto zSigTB = zSig / (fPar->GetDriftVelocity() * 10.) / (fPar->GetTBTime() / 1000.);
+
+         TF1 *hitFunc = new TF1("hit", "gaus", 0, 512);
+         hitFunc->SetParameter(0, Q / (zSigTB * std::sqrt(2 * TMath::Pi())));
+         hitFunc->SetParameter(1, zTB);
+         hitFunc->SetParameter(2, zSigTB);
+
+         LOG(info) << "Drawing hit function";
+         hitFunc->Draw("SAME");
+      }
+   return;
+}
+
 void AtTabPad::SetDraw(Int_t pos, PadDrawType type)
 {
    auto name = TString::Format("padHist_Tab%i_%i", fTabId, pos);
@@ -166,6 +219,10 @@ void AtTabPad::SetDraw(Int_t pos, PadDrawType type)
    fDrawMap.emplace(pos, std::make_pair(type, padHist));
 }
 
+void AtTabPad::DrawHits(int row, int col)
+{
+   fDrawHits.insert(row * fCols + col);
+}
 void AtTabPad::DrawADC(int row, int col)
 {
    SetDraw(row * fCols + col, PadDrawType::kADC);

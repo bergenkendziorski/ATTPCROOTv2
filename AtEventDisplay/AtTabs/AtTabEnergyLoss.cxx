@@ -91,7 +91,7 @@ void AtTabEnergyLoss::setdEdX()
    for (int i = 0; i < 2; ++i) {
 
       for (auto &hit : fPatternEvent.GetInfo()->GetTrackCand()[i].GetHitArray())
-         if (hit.GetPosition().z() > 0) {
+         if (hit.GetPosition().z() > 0 && hit.GetPosition().Z() > fVertex.Z()) {
             dEdx[i]->Fill(getHitDistanceFromVertex(hit), hit.GetCharge());
             dEdxZ[i]->Fill(getHitDistanceFromVertexAlongZ(hit), hit.GetCharge());
          }
@@ -151,5 +151,5 @@ double AtTabEnergyLoss::getHitDistanceFromVertexAlongZ(const AtHit &hit)
 {
    auto p = hit.GetPosition();
    auto diff = p.z() - fVertex.z();
-   return TMath::Abs(diff);
+   return diff;
 }

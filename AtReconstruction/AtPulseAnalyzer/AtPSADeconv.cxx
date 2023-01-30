@@ -277,10 +277,11 @@ AtPSADeconv::HitData AtPSADeconv::getZandQ(const AtPad::trace &charge)
 
    return {{z, zVar, q, qVar}}; // Vector containing a single ZHitData struct
 }
+
 double AtPSADeconv::getZhitVariance(double zLoc, double zLocVar) const
 {
    // zLocVar is in TB^2
-   auto time = zLocVar * fTBTime * fTBTime;           // Get variance in ns^2
+   double time = zLocVar * fTBTime * fTBTime;         // Get variance in ns^2
    time /= 1000 * 1000;                               // Get variance in us^2
    auto pos = time * fDriftVelocity * fDriftVelocity; // Get variance in cm
    pos *= 100;                                        // Get variance in mm

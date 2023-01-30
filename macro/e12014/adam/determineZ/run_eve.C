@@ -59,6 +59,7 @@ void run_eve(TString species = "Bi200", int pressure = 150, TString OutputDataFi
    tabPad->DrawADC(0, 1);
    tabPad->DrawAuxADC("IC", 1, 0);
    tabPad->DrawArrayAug("Qreco", 1, 1);
+   tabPad->DrawHits(1, 1);
 
    eveMan->AddTab(std::move(tabMain));
    eveMan->AddTab(std::move(tabPad));
