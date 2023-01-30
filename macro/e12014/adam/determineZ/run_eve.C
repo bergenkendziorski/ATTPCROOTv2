@@ -8,7 +8,8 @@
 #include "FairLogger.h"
 
 #include "/mnt/simulations/attpcroot/adam/ATTPCROOTv2/macro/e12014/viewerUpdate/HEISTpid1.h"
-void run_eve_species(TString species, int pressure = 150, TString OutputDataFile = "./data/output.reco_display.root")
+
+void run_eve(TString species = "Bi200", int pressure = 150, TString OutputDataFile = "./data/output.reco_display.root")
 {
 
    auto verbSpec =
@@ -58,23 +59,28 @@ void run_eve_species(TString species, int pressure = 150, TString OutputDataFile
    tabPad->DrawAuxADC("IC", 1, 0);
    // tabPad->SetDrawArrayAug(2, "Qreco");
 
-   auto heistTree =
-      std::make_shared<AtTabInfoTree>("E12014", evtInputDataFile, AtViewerManager::Instance()->GetCurrentEntry());
-   auto heistInfo = std::make_shared<AtTabInfoBranch<HTMusicIC>>(heistTree, "MUSIC");
-   auto tabMac = std::make_unique<AtTabMacro>();
-   tabMac->GetTabInfo()->AddAugment(std::move(heistInfo), "MusicIC");
-   tabMac->GetTabInfo()->AddAugment(std::move(heistTree));
-   tabMac->SetDrawTreeFunction(PlotPID);
-
    eveMan->AddTab(std::move(tabMain));
    eveMan->AddTab(std::move(tabPad));
-   eveMan->AddTab(std::move(tabMac));
+   eveMan->AddTab(std::make_unique<AtTabEnergyLoss>());
 
    auto psa = std::make_unique<AtPSAMax>();
    psa->SetThreshold(0);
    AtPSAtask *psaTask = new AtPSAtask(std::move(psa));
    psaTask->SetInputBranch("AtRawEventSub");
    eveMan->AddTask(psaTask);
+
+   auto method = std::make_unique<SampleConsensus::AtSampleConsensus>(
+      SampleConsensus::Estimators::kRANSAC, AtPatterns::PatternType::kLine, RandomSample::SampleMethod::kUniform);
+   method->SetDistanceThreshold(20);
+   method->SetNumIterations(200);
+   method->SetMinHitsPattern(20);
+   method->SetChargeThreshold(-1); //-1 implies no charge-weighted fitting
+   method->SetFitPattern(true);
+
+   auto sacTask = new AtSampleConsensusTask(std::move(method));
+   sacTask->SetPersistence(false);
+   sacTask->SetInputBranch("AtEvent");
+   eveMan->AddTask(sacTask);
 
    eveMan->Init();
 

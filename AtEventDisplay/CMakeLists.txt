@@ -23,6 +23,7 @@ AtTabs/AtTabMacro.cxx
 AtTabs/AtTabMain.cxx
 AtTabs/AtTabPad.cxx
 AtTabs/AtTabInfoTree.cxx
+AtTabs/AtTabEnergyLoss.cxx
 
 AtSidebar/AtEventSidebar.cxx
 AtSidebar/AtSidebarFrames.cxx
