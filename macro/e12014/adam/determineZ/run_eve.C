@@ -28,6 +28,7 @@ void run_eve(TString species = "Bi200", int pressure = 150, TString OutputDataFi
    TString dir = getenv("VMCWORKDIR");
    TString geoFile = "ATTPC_v1.1_geomanager.root";
    TString mapFile = "e12014_pad_mapping.xml";
+   TString parFile = "ATTPC.e12014.par";
 
    TString InputDataPath = InputDataFile;
    TString OutputDataPath = OutputDataFile;
@@ -41,10 +42,10 @@ void run_eve(TString species = "Bi200", int pressure = 150, TString OutputDataFi
    fRun->SetSink(sink);
    fRun->SetGeomFile(GeoDataPath);
 
-   FairRuntimeDb *rtdb = fRun->GetRuntimeDb();
-   FairParRootFileIo *parIo1 = new FairParRootFileIo();
-   // parIo1->open("param.dummy.root");
-   rtdb->setFirstInput(parIo1);
+   FairParAsciiFileIo *parIo1 = new FairParAsciiFileIo();
+   parIo1->open(dir + "/parameters/" + parFile, "in");
+   fRun->GetRuntimeDb()->setFirstInput(parIo1);
+   fRun->GetRuntimeDb()->getContainer("AtDigiPar");
 
    auto fMap = std::make_shared<AtTpcMap>();
    fMap->ParseXMLMap(mapDir.Data());
@@ -57,14 +58,28 @@ void run_eve(TString species = "Bi200", int pressure = 150, TString OutputDataFi
    tabPad->DrawRawADC(0, 0);
    tabPad->DrawADC(0, 1);
    tabPad->DrawAuxADC("IC", 1, 0);
-   // tabPad->SetDrawArrayAug(2, "Qreco");
+   tabPad->DrawArrayAug("Qreco", 1, 1);
 
    eveMan->AddTab(std::move(tabMain));
    eveMan->AddTab(std::move(tabPad));
    eveMan->AddTab(std::make_unique<AtTabEnergyLoss>());
 
-   auto psa = std::make_unique<AtPSAMax>();
-   psa->SetThreshold(0);
+   AtRawEvent *respAvgEvent;
+   TFile *f2 = new TFile("respAvg.root");
+   f2->GetObject("avgResp", respAvgEvent);
+   f2->Close();
+
+   // Create PSA and control for it
+   auto psa = std::make_unique<AtPSADeconvFit>();
+   psa->SetResponse(*respAvgEvent);
+   psa->SetThreshold(15); // Threshold in charge units
+   psa->SetFilterOrder(6);
+   psa->SetCutoffFreq(75);
+   auto sidePSA = new AtSidebarPSADeconv(eveMan->GetSidebar());
+   sidePSA->SetPSA(psa.get());
+   eveMan->GetSidebar()->AddSidebarFrame(sidePSA);
+
+   // Add PSA task to run
    AtPSAtask *psaTask = new AtPSAtask(std::move(psa));
    psaTask->SetInputBranch("AtRawEventSub");
    eveMan->AddTask(psaTask);
@@ -81,6 +96,20 @@ void run_eve(TString species = "Bi200", int pressure = 150, TString OutputDataFi
    sacTask->SetPersistence(false);
    sacTask->SetInputBranch("AtEvent");
    eveMan->AddTask(sacTask);
+
+   auto method2 = std::make_unique<SampleConsensus::AtSampleConsensus>(
+      SampleConsensus::Estimators::kRANSAC, AtPatterns::PatternType::kLine, RandomSample::SampleMethod::kUniform);
+   method2->SetDistanceThreshold(20);
+   method2->SetNumIterations(200);
+   method2->SetMinHitsPattern(20);
+   method2->SetChargeThreshold(-1); //-1 implies no charge-weighted fitting
+   method2->SetFitPattern(true);
+
+   auto sacTask2 = new AtSampleConsensusTask(std::move(method2));
+   sacTask2->SetPersistence(false);
+   sacTask2->SetInputBranch("AtEventH");
+   sacTask2->SetOutputBranch("AtPatternDeconv");
+   eveMan->AddTask(sacTask2);
 
    eveMan->Init();
 
