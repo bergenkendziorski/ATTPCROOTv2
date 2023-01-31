@@ -1,6 +1,7 @@
 #include "AtTabEnergyLoss.h"
 
 #include "AtEvent.h"
+#include "AtPadArray.h"
 #include "AtPatternEvent.h"
 #include "AtPatternLine.h"
 #include "AtRawEvent.h"
@@ -15,7 +16,7 @@ using XYZVector = ROOT::Math::XYZVector;
 using XYZPoint = ROOT::Math::XYZPoint;
 
 AtTabEnergyLoss::AtTabEnergyLoss()
-   : AtTabCanvas("dE/dx", 2, 1), fRawEvent(AtViewerManager::Instance()->GetRawEventName()),
+   : AtTabCanvas("dE/dx", 2, 2), fRawEvent(AtViewerManager::Instance()->GetRawEventName()),
      fEvent(AtViewerManager::Instance()->GetEventName()),
      fPatternEvent(AtViewerManager::Instance()->GetPatternEventName()),
      fEntry(AtViewerManager::Instance()->GetCurrentEntry()), fBinWidth(100)
@@ -44,6 +45,14 @@ AtTabEnergyLoss::AtTabEnergyLoss()
    dEdxStackZ->Add(dEdxZ[0]);
    dEdxStackZ->Add(dEdxZ[1]);
 
+   fSumQ[0] = std::make_unique<TH1F>("qSum_0", "Q Sum Frag 1", 512, 0, 512);
+   fSumQ[0]->SetDirectory(0);
+   fSumQ[1] = std::make_unique<TH1F>("qSum_1", "Q Sum Frag 2", 512, 0, 512);
+   fSumQ[1]->SetDirectory(0);
+
+   dEdxStackSum->Add(fSumQ[0].get());
+   dEdxStackSum->Add(fSumQ[1].get());
+
    fEntry.Attach(this);
 }
 
@@ -62,13 +71,17 @@ void AtTabEnergyLoss::Update(DataHandling::AtSubject *sub)
 
 void AtTabEnergyLoss::Update()
 {
-   for (auto hist : dEdx)
+   for (auto &hist : dEdx)
       hist->Reset();
-   for (auto hist : dEdxZ)
+   for (auto &hist : dEdxZ)
+      hist->Reset();
+   for (auto &hist : fSumQ)
       hist->Reset();
 
-   if (fPatternEvent.GetInfo() == nullptr)
+   if (fPatternEvent.GetInfo() == nullptr) {
+      UpdateCanvas();
       return;
+   }
    if (fPatternEvent.GetInfo()->GetTrackCand().size() != 2) {
       LOG(info) << "Skipping dEdx in event";
       UpdateCanvas();
@@ -77,15 +90,60 @@ void AtTabEnergyLoss::Update()
 
    setAngleAndVertex();
    setdEdX();
+   FillChargeSum();
 
    fCanvas->cd(1);
    dEdxStack->Draw("nostack,X0,ep1");
-   fCanvas->cd(2);
+   fCanvas->cd(3);
    dEdxStackZ->Draw("nostack,X0,ep1");
+
+   fCanvas->cd(2);
+   dEdxStackSum->Draw("nostack;hist");
 
    UpdateCanvas();
 }
 
+/// Assumes there is a non-null rawEvent
+void AtTabEnergyLoss::FillChargeSum(TH1F *hist, const AtPad &pad, int threshold)
+{
+   const auto charge = pad.GetAugment<AtPadArray>("Qreco");
+   if (charge == nullptr) {
+      LOG(error) << "Could not find charge augment for pad " << pad.GetPadNum() << " in raw event!";
+      return;
+   }
+
+   for (int tb = 20; tb < 500; ++tb)
+      if (charge->GetArray(tb) > threshold)
+         hist->Fill(tb + 0.5, charge->GetArray(tb));
+}
+
+void AtTabEnergyLoss::FillChargeSum(TH1F *hist, const std::vector<AtHit> &hits, int threshold)
+{
+   auto rawEvent = fRawEvent.GetInfo();
+   if (rawEvent == nullptr) {
+      std::cout << "Raw event is null!" << std::endl;
+      return;
+   }
+
+   std::set<int> usedPads;
+   for (auto &hit : hits) {
+      if (usedPads.count(hit.GetPadNum()) != 0)
+         continue;
+      usedPads.insert(hit.GetPadNum());
+
+      auto pad = fRawEvent.Get()->GetPad(hit.GetPadNum());
+      if (pad == nullptr)
+         continue;
+      FillChargeSum(hist, *pad, threshold);
+   }
+}
+void AtTabEnergyLoss::FillChargeSum(float threshold)
+{
+
+   for (int i = 0; i < 2; ++i) {
+      FillChargeSum(fSumQ[i].get(), fPatternEvent.GetInfo()->GetTrackCand()[i].GetHitArray(), threshold);
+   }
+}
 void AtTabEnergyLoss::setdEdX()
 {
    for (int i = 0; i < 2; ++i) {

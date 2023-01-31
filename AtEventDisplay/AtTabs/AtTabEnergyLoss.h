@@ -28,6 +28,7 @@ class AtTabEnergyLoss : public AtTabCanvas, public DataHandling::AtObserver {
 protected:
    using XYZVector = ROOT::Math::XYZVector;
    using XYZPoint = ROOT::Math::XYZPoint;
+   using TH1Ptr = std::unique_ptr<TH1F>;
 
    AtTabInfoFairRoot<AtRawEvent> fRawEvent;         //< Points to selected RawEventBranch
    AtTabInfoFairRoot<AtEvent> fEvent;               //< Points to selected EventBranch
@@ -47,7 +48,9 @@ protected:
    THStack *dEdxStackZ{new THStack("hsz", "Stacked dE/dx curves bin in Z")};
    std::array<TH1F *, 2> dEdxZ;
 
-   // Histograms to fill with charge information
+   // Histograms to fill with charge sum
+   THStack *dEdxStackSum{new THStack("hsSum", "Stacked dE/dx curves")};
+   std::array<TH1Ptr, 2> fSumQ;
 
 public:
    AtTabEnergyLoss();
@@ -63,6 +66,10 @@ private:
    double getHitDistanceFromVertex(const AtHit &hit);
    double getHitDistanceFromVertexAlongZ(const AtHit &hit);
    XYZPoint calcualteVetrex(const std::vector<XYZVector> &lineStart, const std::vector<XYZVector> &lineStep);
+
+   void FillChargeSum(float threshold = 15);
+   void FillChargeSum(TH1F *hist, const AtPad &pad, int threshold);
+   void FillChargeSum(TH1F *hist, const std::vector<AtHit> &hits, int threshold);
 };
 
 #endif //#ifndef ATTABENERGYLOSS_H
