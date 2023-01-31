@@ -1,5 +1,6 @@
 #include "AtTabEnergyLoss.h"
 
+#include "AtDataManip.h"
 #include "AtEvent.h"
 #include "AtPadArray.h"
 #include "AtPatternEvent.h"
@@ -9,11 +10,23 @@
 #include "AtViewerManager.h"
 
 #include <TCanvas.h>
+#include <TF1.h>
 #include <TH1.h>
 #include <THStack.h>
 
 using XYZVector = ROOT::Math::XYZVector;
 using XYZPoint = ROOT::Math::XYZPoint;
+
+void AtTabEnergyLoss::SetStyle(std::array<TH1Ptr, 2> &hists, THStack &stack)
+{
+   for (int i = 0; i < hists.size(); ++i) {
+      hists[i]->SetLineColor(fHistColors[i]);
+      hists[i]->SetMarkerColor(fHistColors[i]);
+      hists[i]->SetMarkerStyle(21);
+      hists[i]->SetDirectory(nullptr);
+      stack.Add(hists[i].get());
+   }
+}
 
 AtTabEnergyLoss::AtTabEnergyLoss()
    : AtTabCanvas("dE/dx", 2, 2), fRawEvent(AtViewerManager::Instance()->GetRawEventName()),
@@ -25,33 +38,21 @@ AtTabEnergyLoss::AtTabEnergyLoss()
    double maxLength = TMath::Sqrt(TMath::Sq(1000) + TMath::Sq(25));
    int nBins = TMath::CeilNint(maxLength / fBinWidth.Get());
 
-   dEdx[0] = new TH1F("dEdx1", "dEdX Frag 1", nBins, 0, maxLength);
-   dEdx[0]->SetMarkerStyle(21);
-   dEdx[0]->SetMarkerColor(9);
-   dEdx[1] = new TH1F("dEdx2", "dEdX Frag 2", nBins, 0, maxLength);
-   dEdx[1]->SetMarkerStyle(21);
-   dEdx[1]->SetMarkerColor(31);
+   dEdx[0] = std::make_unique<TH1F>("dEdx1", "dEdX Frag 1", nBins, 0, maxLength);
+   dEdx[1] = std::make_unique<TH1F>("dEdx2", "dEdX Frag 2", nBins, 0, maxLength);
+   SetStyle(dEdx, dEdxStack);
 
-   dEdxStack->Add(dEdx[0]);
-   dEdxStack->Add(dEdx[1]);
-
-   dEdxZ[0] = new TH1F("dEdxZ1", "dEdX Frag 1", nBins, 0, maxLength);
-   dEdxZ[0]->SetMarkerStyle(21);
-   dEdxZ[0]->SetMarkerColor(9);
-   dEdxZ[1] = new TH1F("dEdxZ2", "dEdX Frag 2", nBins, 0, maxLength);
-   dEdxZ[1]->SetMarkerStyle(21);
-   dEdxZ[1]->SetMarkerColor(31);
-
-   dEdxStackZ->Add(dEdxZ[0]);
-   dEdxStackZ->Add(dEdxZ[1]);
+   dEdxZ[0] = std::make_unique<TH1F>("dEdxZ1", "dEdX Frag 1", nBins, 0, maxLength);
+   dEdxZ[1] = std::make_unique<TH1F>("dEdxZ2", "dEdX Frag 2", nBins, 0, maxLength);
+   SetStyle(dEdxZ, dEdxStackZ);
 
    fSumQ[0] = std::make_unique<TH1F>("qSum_0", "Q Sum Frag 1", 512, 0, 512);
-   fSumQ[0]->SetDirectory(0);
    fSumQ[1] = std::make_unique<TH1F>("qSum_1", "Q Sum Frag 2", 512, 0, 512);
-   fSumQ[1]->SetDirectory(0);
+   SetStyle(fSumQ, dEdxStackSum);
 
-   dEdxStackSum->Add(fSumQ[0].get());
-   dEdxStackSum->Add(fSumQ[1].get());
+   fSumFit[0] = std::make_unique<TH1F>("fitSum_0", "Fit Sum Frag 1", 512, 0, 512);
+   fSumFit[1] = std::make_unique<TH1F>("fitSum_1", "Fit Sum Frag 2", 512, 0, 512);
+   SetStyle(fSumFit, dEdxStackFit);
 
    fEntry.Attach(this);
 }
@@ -77,6 +78,8 @@ void AtTabEnergyLoss::Update()
       hist->Reset();
    for (auto &hist : fSumQ)
       hist->Reset();
+   for (auto &hist : fSumFit)
+      hist->Reset();
 
    if (fPatternEvent.GetInfo() == nullptr) {
       UpdateCanvas();
@@ -90,19 +93,30 @@ void AtTabEnergyLoss::Update()
 
    setAngleAndVertex();
    setdEdX();
-   FillChargeSum();
+   FillSums();
 
    fCanvas->cd(1);
-   dEdxStack->Draw("nostack,X0,ep1");
+   dEdxStack.Draw("nostack,X0,ep1");
    fCanvas->cd(3);
-   dEdxStackZ->Draw("nostack,X0,ep1");
+   dEdxStackZ.Draw("nostack,X0,ep1");
 
    fCanvas->cd(2);
-   dEdxStackSum->Draw("nostack;hist");
+   dEdxStackSum.Draw("nostack;hist");
+   fCanvas->cd(4);
+   dEdxStackFit.Draw("nostack;hist");
 
    UpdateCanvas();
 }
 
+void AtTabEnergyLoss::FillFitSum(TH1F *hist, const AtHit &hit)
+{
+   auto func = AtTools::GetHitFunctionTB(hit);
+   if (func == nullptr)
+      return;
+
+   for (int tb = 0; tb < 512; ++tb)
+      hist->Fill(tb, func->Eval(tb));
+}
 /// Assumes there is a non-null rawEvent
 void AtTabEnergyLoss::FillChargeSum(TH1F *hist, const AtPad &pad, int threshold)
 {
@@ -117,7 +131,7 @@ void AtTabEnergyLoss::FillChargeSum(TH1F *hist, const AtPad &pad, int threshold)
          hist->Fill(tb + 0.5, charge->GetArray(tb));
 }
 
-void AtTabEnergyLoss::FillChargeSum(TH1F *hist, const std::vector<AtHit> &hits, int threshold)
+void AtTabEnergyLoss::FillSums(TH1F *hist, const std::vector<AtHit> &hits, int threshold)
 {
    auto rawEvent = fRawEvent.GetInfo();
    if (rawEvent == nullptr) {
@@ -127,6 +141,7 @@ void AtTabEnergyLoss::FillChargeSum(TH1F *hist, const std::vector<AtHit> &hits, 
 
    std::set<int> usedPads;
    for (auto &hit : hits) {
+
       if (usedPads.count(hit.GetPadNum()) != 0)
          continue;
       usedPads.insert(hit.GetPadNum());
@@ -137,11 +152,13 @@ void AtTabEnergyLoss::FillChargeSum(TH1F *hist, const std::vector<AtHit> &hits, 
       FillChargeSum(hist, *pad, threshold);
    }
 }
-void AtTabEnergyLoss::FillChargeSum(float threshold)
+void AtTabEnergyLoss::FillSums(float threshold)
 {
 
    for (int i = 0; i < 2; ++i) {
-      FillChargeSum(fSumQ[i].get(), fPatternEvent.GetInfo()->GetTrackCand()[i].GetHitArray(), threshold);
+      FillSums(fSumQ[i].get(), fPatternEvent.GetInfo()->GetTrackCand()[i].GetHitArray(), threshold);
+      for (auto &hit : fPatternEvent.GetInfo()->GetTrackCand()[i].GetHitArray())
+         FillFitSum(fSumFit[i].get(), hit);
    }
 }
 void AtTabEnergyLoss::setdEdX()

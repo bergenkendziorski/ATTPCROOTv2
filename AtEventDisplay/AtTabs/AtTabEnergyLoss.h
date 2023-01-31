@@ -42,15 +42,21 @@ protected:
    std::vector<std::vector<double>> fCharge;
    std::vector<AtTrack> fTracks;
 
+   // Helpful things
+   const std::array<Color_t, 2> fHistColors = {9, 31};
+
    // Histograms we are filling
-   THStack *dEdxStack{new THStack("hs", "Stacked dE/dx curves")};
-   std::array<TH1F *, 2> dEdx;
-   THStack *dEdxStackZ{new THStack("hsz", "Stacked dE/dx curves bin in Z")};
-   std::array<TH1F *, 2> dEdxZ;
+   THStack dEdxStack{"hs", "Stacked dE/dx curves"};
+   std::array<TH1Ptr, 2> dEdx;
+   THStack dEdxStackZ{"hsz", "Stacked dE/dx curves bin in Z"};
+   std::array<TH1Ptr, 2> dEdxZ;
 
    // Histograms to fill with charge sum
-   THStack *dEdxStackSum{new THStack("hsSum", "Stacked dE/dx curves")};
+   THStack dEdxStackSum{"hsSum", "Stacked dE/dx curves"};
    std::array<TH1Ptr, 2> fSumQ;
+
+   THStack dEdxStackFit{"hsFit", "Stacked dE/dx curves"};
+   std::array<TH1Ptr, 2> fSumFit;
 
 public:
    AtTabEnergyLoss();
@@ -60,6 +66,7 @@ public:
    void Update(DataHandling::AtSubject *sub) override;
 
 private:
+   void SetStyle(std::array<TH1Ptr, 2> &hists, THStack &stack);
    void Update();
    void setAngleAndVertex();
    void setdEdX();
@@ -67,9 +74,10 @@ private:
    double getHitDistanceFromVertexAlongZ(const AtHit &hit);
    XYZPoint calcualteVetrex(const std::vector<XYZVector> &lineStart, const std::vector<XYZVector> &lineStep);
 
-   void FillChargeSum(float threshold = 15);
+   void FillFitSum(TH1F *hist, const AtHit &hit);
+   void FillSums(float threshold = 15);
    void FillChargeSum(TH1F *hist, const AtPad &pad, int threshold);
-   void FillChargeSum(TH1F *hist, const std::vector<AtHit> &hits, int threshold);
+   void FillSums(TH1F *hist, const std::vector<AtHit> &hits, int threshold);
 };
 
 #endif //#ifndef ATTABENERGYLOSS_H
