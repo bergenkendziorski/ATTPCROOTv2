@@ -17,6 +17,7 @@ class TBuffer;
 class TClass;
 class TPad;
 class TMemberInspector;
+class TF1;
 class AtPad;
 class AtHit;
 class TH1D;
@@ -31,6 +32,7 @@ class AtSubject;
 class AtTabPad : public AtTabCanvas, public DataHandling::AtObserver {
 protected:
    enum class PadDrawType { kADC, kRawADC, kArrAug, kAuxPad };
+   using TF1Vec = std::vector<std::unique_ptr<TF1>>;
 
    /// <location, <type, histo>
    /// location is row * nCols + col
@@ -38,7 +40,7 @@ protected:
    std::unordered_map<Int_t, std::string> fAugNames;                   //< Augment and Aux pad names
    DataHandling::AtPadNum *fPadNum;
 
-   std::set<Int_t> fDrawHits; //< Draw representation of hits on trace in these TPads
+   std::unordered_map<Int_t, TF1Vec> fDrawHits; //< Draw representation of hits on trace in these TPads
 
 public:
    AtTabPad(int nRow = 1, int nCol = 1, TString name = "AtPad");
@@ -67,7 +69,7 @@ private:
    void DrawAdc(TH1D *hist, const AtPad &pad);
    void DrawRawAdc(TH1D *hist, const AtPad &pad);
    void DrawArrayAug(TH1D *hist, const AtPad &pad, TString augName);
-   void DrawHit(const AtPad &pad);
+   void DrawHit(const AtPad &pad, TF1Vec &funcs);
    // void DrawHit(TPad *canv, const AtHit &hit);
 
    void UpdateCvsPad();

@@ -50,6 +50,7 @@ Set(DEPENDENCIES
   ROOT::HistPainter
 
   ATTPCROOT::AtData
+  ATTPCROOT::AtTools
   ATTPCROOT::AtMap
   ATTPCROOT::AtReconstruction
   ATTPCROOT::AtS800

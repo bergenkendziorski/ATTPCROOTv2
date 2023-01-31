@@ -47,6 +47,8 @@ protected:
    THStack *dEdxStackZ{new THStack("hsz", "Stacked dE/dx curves bin in Z")};
    std::array<TH1F *, 2> dEdxZ;
 
+   // Histograms to fill with charge information
+
 public:
    AtTabEnergyLoss();
    ~AtTabEnergyLoss();
