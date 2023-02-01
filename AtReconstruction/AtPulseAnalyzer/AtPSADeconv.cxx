@@ -234,7 +234,7 @@ AtPSADeconv::HitVector AtPSADeconv::chargeToHits(AtPad &pad, std::string qName)
    HitVector ret;
    auto charge = dynamic_cast<AtPadArray *>(pad.GetAugment(qName));
 
-   LOG(info) << "PadNum: " << pad.GetPadNum();
+   LOG(debug) << "PadNum: " << pad.GetPadNum();
    auto hitVec = getZandQ(charge->GetArray());
 
    for (auto &ZandQ : hitVec) {
@@ -252,7 +252,7 @@ AtPSADeconv::HitVector AtPSADeconv::chargeToHits(AtPad &pad, std::string qName)
 
       ret.push_back(std::move(hit));
    }
-   std::cout << std::endl;
+
    return ret;
 }
 

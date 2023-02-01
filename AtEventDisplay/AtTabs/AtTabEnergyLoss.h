@@ -36,6 +36,11 @@ protected:
    DataHandling::AtTreeEntry &fEntry;               //< Tracks current entry
    DataHandling::AtSimpleType<float> fBinWidth;     //< Width of binning in mm
 
+   /// Number of std dev to go after the mean of the first hit before calcualting the ratio of the
+   /// histograms.
+   DataHandling::AtSimpleType<float> fSigmaFromHit;
+   DataHandling::AtSimpleType<int> fTBtoAvg; //< Number of TB from track start to average for ratio.
+
    // Data for current entry
    double fAngle;
    XYZPoint fVertex;
@@ -45,9 +50,9 @@ protected:
    // Helpful things
    const std::array<Color_t, 2> fHistColors = {9, 31};
 
-   // Histograms we are filling
    THStack dEdxStack{"hs", "Stacked dE/dx curves"};
    std::array<TH1Ptr, 2> dEdx;
+
    THStack dEdxStackZ{"hsz", "Stacked dE/dx curves bin in Z"};
    std::array<TH1Ptr, 2> dEdxZ;
 
@@ -57,6 +62,16 @@ protected:
 
    THStack dEdxStackFit{"hsFit", "Stacked dE/dx curves"};
    std::array<TH1Ptr, 2> fSumFit;
+
+   TH1Ptr fRatioQ;   //<Ratio of max(fSumQ)/min(fSumQ)
+   TH1Ptr fRatioFit; //<Ratio of max(fSumFit)/min(fSumFit)
+
+   std::array<float, 2> fTrackStart;
+   std::array<AtHit *, 2> fFirstHit{nullptr, nullptr}; //< First hit calculated according to the gaussian fits
+
+   std::unique_ptr<TF1> fRatioFunc;
+
+   std::vector<AtPadReference> fVetoPads;
 
 public:
    AtTabEnergyLoss();
@@ -74,10 +89,13 @@ private:
    double getHitDistanceFromVertexAlongZ(const AtHit &hit);
    XYZPoint calcualteVetrex(const std::vector<XYZVector> &lineStart, const std::vector<XYZVector> &lineStep);
 
-   void FillFitSum(TH1F *hist, const AtHit &hit);
    void FillSums(float threshold = 15);
-   void FillChargeSum(TH1F *hist, const AtPad &pad, int threshold);
-   void FillSums(TH1F *hist, const std::vector<AtHit> &hits, int threshold);
+
+   void FillChargeSum(TH1F *hist, const std::vector<AtHit> &hits, int threshold);
+   void FillFitSum(TH1F *hist, const AtHit &hit, int threshold);
+
+   void FillRatio();
+   bool isGoodHit(const AtHit &hit);
 };
 
 #endif //#ifndef ATTABENERGYLOSS_H

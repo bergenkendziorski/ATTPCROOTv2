@@ -24,7 +24,7 @@ AtPSADeconv::HitData AtPSADeconvFit::getZandQ(const AtPad::trace &charge)
    auto sigTime = longDiff / fDriftVelocity;             // [us] longitudal diff sigma
    auto sigTB = sigTime / fTBTime * 1000.;               // [TB] sigTime is us, TBTime is ns.
 
-   LOG(info) << "zTB: " << zTB << " zTime " << driftTime << " sigTB: " << sigTB << " Amp: " << *maxTB;
+   LOG(debug) << "zTB: " << zTB << " zTime " << driftTime << " sigTB: " << sigTB << " Amp: " << *maxTB;
 
    if (*maxTB < getThreshold() || zTB < 20 || zTB > 500) {
       LOG(debug) << "Skipping pad: " << *maxTB << " below threshold or " << zTB
@@ -52,8 +52,8 @@ AtPSADeconv::HitData AtPSADeconvFit::getZandQ(const AtPad::trace &charge)
    auto sig = resultPtr->GetParams()[2];
 
    auto Q = amp * sig * std::sqrt(2 * TMath::Pi());
-   LOG(info) << "Initial: " << zTB << " " << sigTB << " " << *maxTB;
-   LOG(info) << "Fit: " << z << " " << sig << " " << amp;
+   LOG(debug) << "Initial: " << zTB << " " << sigTB << " " << *maxTB;
+   LOG(debug) << "Fit: " << z << " " << sig << " " << amp;
    // LOG(info) << "Q: " << Q;
 
    /// TODO: Error in charge?
