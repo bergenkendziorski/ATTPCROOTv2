@@ -15,6 +15,7 @@
 #include <TF1.h>
 #include <TH1.h>
 #include <THStack.h>
+#include <TStyle.h>
 
 using XYZVector = ROOT::Math::XYZVector;
 using XYZPoint = ROOT::Math::XYZPoint;
@@ -26,6 +27,7 @@ void AtTabEnergyLoss::SetStyle(std::array<TH1Ptr, 2> &hists, THStack &stack)
       hists[i]->SetMarkerColor(fHistColors[i]);
       hists[i]->SetMarkerStyle(21);
       hists[i]->SetDirectory(nullptr);
+
       stack.Add(hists[i].get());
    }
 }
@@ -34,8 +36,10 @@ AtTabEnergyLoss::AtTabEnergyLoss()
    : AtTabCanvas("dE/dx", 2, 2), fRawEvent(AtViewerManager::Instance()->GetRawEventName()),
      fEvent(AtViewerManager::Instance()->GetEventName()),
      fPatternEvent(AtViewerManager::Instance()->GetPatternEventName()),
-     fEntry(AtViewerManager::Instance()->GetCurrentEntry()), fBinWidth(100), fSigmaFromHit(1), fTBtoAvg(10),
-     fRatioFunc(std::make_unique<TF1>("ratioFunc", "pol0", 0, 1, TF1::EAddToList::kNo))
+     fEntry(AtViewerManager::Instance()->GetCurrentEntry()), fBinWidth(100), fSigmaFromHit(2), fTBtoAvg(10),
+     fRatioFunc(std::make_unique<TF1>("ratioFunc", "pol0", 0, 1, TF1::EAddToList::kNo)),
+     fProxyFunc(std::make_unique<TF1>("proxyFunc", "pol0", 0, 1, TF1::EAddToList::kNo)),
+     fZFunc(std::make_unique<TF1>("zFunc", "pol0", 0, 1, TF1::EAddToList::kNo))
 {
 
    double maxLength = TMath::Sqrt(TMath::Sq(1000) + TMath::Sq(25));
@@ -59,6 +63,8 @@ AtTabEnergyLoss::AtTabEnergyLoss()
 
    fRatioQ = std::make_unique<TH1F>("ratioQ", "Ratio of Q Sum", 512, 0, 512);
    fRatioFit = std::make_unique<TH1F>("ratioFit", "Ratio of Fit Sum", 512, 0, 512);
+   fProxy = std::make_unique<TH1F>("proxy", "Z Proxy", 512, 0, 512);
+   fZHist = std::make_unique<TH1F>("zHist", "Z of light fragment", 512, 0, 512);
 
    fVetoPads = {{0, 1, 1, 6},  {0, 1, 1, 7},  {0, 1, 1, 9},  {0, 1, 1, 10}, {0, 1, 1, 12}, {0, 1, 1, 39},
                 {0, 1, 1, 40}, {0, 1, 1, 41}, {0, 1, 1, 44}, {0, 1, 1, 43}, {0, 1, 1, 46}, {0, 1, 3, 13}};
@@ -104,6 +110,8 @@ void AtTabEnergyLoss::Update()
       hist->Reset();
    fRatioQ->Reset();
    fRatioFit->Reset();
+   fProxy->Reset();
+   fZHist->Reset();
 
    if (fPatternEvent.GetInfo() == nullptr) {
       return;
@@ -129,21 +137,27 @@ void AtTabEnergyLoss::Update()
    // dEdxStackZ.Draw("nostack,X0,ep1");
 
    fCanvas->cd(3);
-   fRatioQ->Draw("hist");
-   fRatioFunc->Draw("SAME");
+   fZHist->Draw("hist");
+   fZFunc->Draw("SAME");
+   // fRatioFunc->Draw("SAME");
 
    fCanvas->cd(4);
    fRatioFit->Draw("hist");
    fRatioFunc->Draw("SAME");
 }
 
+float AtTabEnergyLoss::GetZ(int Zcn, float R)
+{
+   return Zcn / (2 * R) * (R - 1 + std::sqrt(1 - R * R));
+}
 void AtTabEnergyLoss::FillRatio()
 {
    // Get the hit to use as the start of the ratio filling. We want the index that is closest to
    // the pad plane (location is closest to zero)
    int index = (fTrackStart[0] < fTrackStart[1]) ? 0 : 1;
-   int tbIni = AtTools::GetTB(fTrackStart[index]);
-   LOG(info) << "Starting ratio from " << fTrackStart[index] << "(mm) " << AtTools::GetTB(fTrackStart[index]) << "(TB)";
+   int tbFinal = AtTools::GetTB(fTrackStart[index]);
+   int tbIni = tbFinal - fTBtoAvg.Get();
+   LOG(info) << "Starting ratio from " << fTrackStart[index] << "(mm) " << tbFinal << "(TB)";
 
    // Get the track index that has the higher charge. This should be the numberator in the division
    int trackInd = fSumQ[0]->GetBinContent(tbIni + 1) > fSumQ[1]->GetBinContent(tbIni + 1) ? 0 : 1;
@@ -151,16 +165,39 @@ void AtTabEnergyLoss::FillRatio()
    fRatioQ->Divide(fSumQ[trackInd].get(), fSumQ[(trackInd + 1) % 2].get());
    fRatioFit->Divide(fSumFit[trackInd].get(), fSumFit[(trackInd + 1) % 2].get());
 
-   // Get the average of the ratio
-   double avg = 0;
-
-   for (int i = 0; i < fTBtoAvg.Get(); ++i) {
-      avg += fRatioFit->GetBinContent(tbIni - i + 1);
+   // Fill the proxy function
+   for (int i = 0; i < fSumFit[0]->GetNbinsX(); ++i) {
+      auto de1 = fSumFit[0]->GetBinContent(i);
+      auto de2 = fSumFit[1]->GetBinContent(i);
+      if (de1 + de2 == 0)
+         continue;
+      auto proxy = std::abs(de1 - de2) / (de1 + de2);
+      fProxy->SetBinContent(i, proxy);
+      fZHist->SetBinContent(i, GetZ(85, proxy));
    }
-   avg /= fTBtoAvg.Get();
-   LOG(info) << "Average ratio: " << avg;
-   fRatioFunc->SetParameter(0, avg);
-   fRatioFunc->SetRange(tbIni - fTBtoAvg.Get(), tbIni);
+
+   // Get the average of the ratio
+   double ratioAvg = 0, proxyAvg = 0;
+
+   for (int i = tbIni; i < tbFinal; ++i) {
+      ratioAvg += fRatioFit->GetBinContent(i + 1);
+      proxyAvg += fProxy->GetBinContent(i + 1);
+   }
+   ratioAvg /= fTBtoAvg.Get();
+   proxyAvg /= fTBtoAvg.Get();
+
+   LOG(info) << "Average ratio: " << ratioAvg << " Z avg: " << GetZ(85, proxyAvg) << "/" << 85 - GetZ(85, proxyAvg);
+
+   // Set range of functions
+   fRatioFunc->SetRange(tbIni, tbFinal);
+   fZFunc->SetRange(tbIni, tbFinal);
+   fProxyFunc->SetRange(tbIni, tbFinal);
+
+   // Set value of functions
+   fRatioFunc->SetParameter(0, ratioAvg);
+
+   fZFunc->SetParameter(0, GetZ(85, proxyAvg));
+   fProxyFunc->SetParameter(0, proxyAvg);
 }
 
 void AtTabEnergyLoss::FillFitSum(TH1F *hist, const AtHit &hit, int threshold)
@@ -244,7 +281,7 @@ void AtTabEnergyLoss::FillSums(float threshold)
             // Update hit location
             auto hitLocation = hit.GetPosition().Z() - fSigmaFromHit.Get() * hit.GetPositionSigma().Z();
             if (fTrackStart[i] < hitLocation) {
-               LOG(info) << "Setting start of " << i << " to " << hit.GetPosition() << " at " << hit.GetPadNum();
+               LOG(debug) << "Setting start of " << i << " to " << hit.GetPosition() << " at " << hit.GetPadNum();
                fTrackStart[i] = hitLocation;
             }
          }

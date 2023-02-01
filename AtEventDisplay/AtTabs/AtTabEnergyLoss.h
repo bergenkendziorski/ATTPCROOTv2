@@ -57,19 +57,23 @@ protected:
    std::array<TH1Ptr, 2> dEdxZ;
 
    // Histograms to fill with charge sum
-   THStack dEdxStackSum{"hsSum", "Stacked dE/dx curves"};
+   THStack dEdxStackSum{"hsSum", "dQ/dZ (summing charge)"};
    std::array<TH1Ptr, 2> fSumQ;
 
-   THStack dEdxStackFit{"hsFit", "Stacked dE/dx curves"};
+   THStack dEdxStackFit{"hsFit", "dQ/dZ (summing gaussian fits)"};
    std::array<TH1Ptr, 2> fSumFit;
 
    TH1Ptr fRatioQ;   //<Ratio of max(fSumQ)/min(fSumQ)
    TH1Ptr fRatioFit; //<Ratio of max(fSumFit)/min(fSumFit)
+   TH1Ptr fProxy;    //<Proxy for Z in an event
+   TH1Ptr fZHist;    //<Z in an event
 
    std::array<float, 2> fTrackStart;
    std::array<AtHit *, 2> fFirstHit{nullptr, nullptr}; //< First hit calculated according to the gaussian fits
 
    std::unique_ptr<TF1> fRatioFunc;
+   std::unique_ptr<TF1> fProxyFunc;
+   std::unique_ptr<TF1> fZFunc;
 
    std::vector<AtPadReference> fVetoPads;
 
@@ -79,6 +83,8 @@ public:
    void InitTab() override;
    void Exec() override{};
    void Update(DataHandling::AtSubject *sub) override;
+
+   static float GetZ(int Zcn, float proxy);
 
 private:
    void SetStyle(std::array<TH1Ptr, 2> &hists, THStack &stack);

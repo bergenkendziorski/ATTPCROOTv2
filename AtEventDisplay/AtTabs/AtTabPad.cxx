@@ -191,6 +191,7 @@ void AtTabPad::SetDraw(Int_t pos, PadDrawType type)
 {
    auto name = TString::Format("padHist_Tab%i_%i", fTabId, pos);
    TH1D *padHist = new TH1D(name, name, 512, 0, 512);
+   padHist->SetBit(TH1::kNoTitle);
    fDrawMap.emplace(pos, std::make_pair(type, padHist));
 }
 
