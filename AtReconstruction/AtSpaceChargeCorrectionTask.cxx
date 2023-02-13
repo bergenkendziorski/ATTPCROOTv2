@@ -1,5 +1,5 @@
 #include "AtSpaceChargeCorrectionTask.h"
-
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include "AtEvent.h"
 #include "AtHit.h"
 #include "AtSpaceChargeModel.h"
@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+class AtDigiPar;
 using XYZPoint = ROOT::Math::XYZPoint;
 
 ClassImp(AtSpaceChargeCorrectionTask);
@@ -68,11 +69,11 @@ void AtSpaceChargeCorrectionTask::Exec(Option_t *opt)
    auto outputEvent = dynamic_cast<AtEvent *>(fOutputEventArray.ConstructedAt(0));
    outputEvent->CopyFrom(*inputEvent);
 
-   for (auto &inHit : inputEvent->GetHitArray()) {
+   for (auto &inHit : inputEvent->GetHits()) {
       XYZPoint newPosition;
-      newPosition = fSCModel->CorrectSpaceCharge(inHit.GetPosition());
-      auto &newHit = outputEvent->AddHit(inHit);
+      newPosition = fSCModel->CorrectSpaceCharge(inHit->GetPosition());
+      auto &newHit = outputEvent->AddHit(inHit->Clone());
       newHit.SetPosition(newPosition);
-      LOG(debug) << inHit.GetPosition() << " " << outputEvent->GetHitArray().back().GetPosition();
+      LOG(debug) << inHit->GetPosition() << " " << outputEvent->GetHits().back()->GetPosition();
    }
 }

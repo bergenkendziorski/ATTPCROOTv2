@@ -6,6 +6,7 @@
 #include <TCanvas.h>
 #include <TDOMParser.h>
 #include <TH2Poly.h>
+#include <TObject.h> // for TObject
 #include <TStyle.h>
 #include <TXMLDocument.h>
 #include <TXMLNode.h>
@@ -37,7 +38,40 @@ std::ostream &operator<<(std::ostream &os, const AtMap::InhibitType &t)
    return os;
 }
 
-AtMap::AtMap() : AtPadCoord(boost::extents[10240][3][2]), fPadPlane(new TH2Poly()) {}
+AtMap::AtMap() : AtPadCoord(boost::extents[10240][3][2]), fPadPlane(nullptr) {}
+
+AtPadReference AtMap::GetNearestFPN(int padNum) const
+{
+   return GetNearestFPN(GetPadRef(padNum));
+}
+
+AtPadReference AtMap::GetNearestFPN(const AtPadReference &ref) const
+{
+   auto fpn = ref;
+   if (ref.ch < 17)
+      fpn.ch = 11;
+   else if (ref.ch < 34)
+      fpn.ch = 22;
+   else if (ref.ch < 51)
+      fpn.ch = 45;
+   else
+      fpn.ch = 56;
+
+   return fpn;
+}
+
+bool AtMap::IsFPNchannel(const AtPadReference &ref) const
+{
+   return ref.ch == 11 || ref.ch == 22 || ref.ch == 45 || ref.ch == 56;
+}
+
+TH2Poly *AtMap::GetPadPlane()
+{
+   if (fPadPlane == nullptr)
+      GeneratePadPlane();
+
+   return dynamic_cast<TH2Poly *>(fPadPlane->Clone());
+}
 
 Int_t AtMap::GetPadNum(const AtPadReference &PadRef) const
 {
@@ -155,6 +189,8 @@ void AtMap::ParseMapList(TXMLNode *node)
              strcmp(node->GetNodeName(), "LookupGADGET08232021") == 0 ||
              strcmp(node->GetNodeName(), "Lookup20141208") == 0 ||
              strcmp(node->GetNodeName(), "LookupSpecMATnoScint") == 0 ||
+             strcmp(node->GetNodeName(), "LookupSpecMATnoScintHisto") == 0 ||
+             strcmp(node->GetNodeName(), "LookupSpecMATnoScint3seg") == 0 ||
              strcmp(node->GetNodeName(), "LookupProtoND") == 0) { // TODO Implement this as function parameter
 
             ParseAtTPCMap(node->GetChildren());
@@ -163,7 +199,6 @@ void AtMap::ParseMapList(TXMLNode *node)
          // std::cout <<node->GetNodeName()<<std::endl;
       }
    }
-
    kIsParsed = true;
 }
 

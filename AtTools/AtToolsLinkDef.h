@@ -8,15 +8,17 @@
 #pragma link C++ nestedtypedef;
 #pragma link C++ namespace AtTools;
 #pragma link C++ namespace RandomSample;
+#pragma link C++ namespace ElectronicResponse;
 
 #pragma link C++ class AtTools::AtELossManager + ;
 #pragma link C++ class AtTools::AtParsers + ;
 #pragma link C++ class AtEulerTransformation + ;
 #pragma link C++ class AtTools::AtTrackTransformer - !;
 
-#pragma link C++ class AtSpaceChargeModel + ;
-#pragma link C++ class AtLineChargeModel + ;
+#pragma link C++ class AtSpaceChargeModel - !;
+#pragma link C++ class AtLineChargeModel - !;
 #pragma link C++ class AtRadialChargeModel - !;
+#pragma link C++ class AtEDistortionModel - !;
 
 #pragma link C++ class AtTools::AtKinematics + ;
 #pragma link C++ class AtTools::AtVirtualTerminal + ;
@@ -28,8 +30,25 @@
 #pragma link C++ class RandomSample::AtGaussian - !;
 #pragma link C++ class RandomSample::AtWeightedGaussian - !;
 #pragma link C++ class RandomSample::AtWeightedY - !;
+#pragma link C++ class RandomSample::AtWeightedGaussianTrunc - !;
 
 #pragma link C++ enum RandomSample::SampleMethod;
 #pragma link C++ function RandomSample::CreateSampler;
+
+#pragma link C++ class ElectronicResponse::AtElectronicResponse - !;
+#pragma link C++ class ElectronicResponse::AtNominalResponse - !;
+#pragma link C++ class ElectronicResponse::AtReducedTimeResponse - !;
+#pragma link C++ class ElectronicResponse::AtVectorResponse - !;
+#pragma link C++ class ElectronicResponse::AtFileResponse - !;
+
+#pragma link C++ class AtCutHEIST - !; p
+#pragma link C++ class CSVRow < int> - !;
+#pragma link C++ class CSVIterator < int> - !;
+#pragma link C++ class CSVRange < int> - !;
+
+#pragma link C++ function AtTools::GetHitFunctionTB;
+#pragma link C++ function AtTools::GetHitFunction;
+#pragma link C++ function AtTools::GetTB;
+#pragma link C++ function AtTools::GetDriftTB;
 
 #endif

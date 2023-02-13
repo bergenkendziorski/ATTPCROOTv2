@@ -46,7 +46,29 @@ public:
    AtTrack &operator=(AtTrack obj);
    AtTrack(AtTrack &&) = default;
    ~AtTrack() = default;
-   friend void swap(AtTrack &a, AtTrack &b) noexcept;
+
+   /**
+    * @brief ADL-findable swap for AtTrack.
+    *
+    * Implemented as a friend free function to enable ADL of swap.
+    * (https://en.cppreference.com/w/cpp/language/adl)
+    */
+   friend void swap(AtTrack &a, AtTrack &b) noexcept
+   {
+      using std::swap; // Enable ADL
+
+      swap(a.fTrackID, b.fTrackID);
+      swap(a.fHitArray, b.fHitArray);
+      swap(a.fHitClusterArray, b.fHitClusterArray);
+      swap(a.fPattern, b.fPattern);
+      swap(a.fIsMerged, b.fIsMerged);
+      swap(a.fVertexToZDist, b.fVertexToZDist);
+
+      swap(a.fGeoThetaAngle, b.fGeoThetaAngle);
+      swap(a.fGeoPhiAngle, b.fGeoPhiAngle);
+      swap(a.fGeoRadius, b.fGeoRadius);
+      swap(a.fGeoCenter, b.fGeoCenter);
+   };
 
    // Getters
    Int_t GetTrackID() const { return fTrackID; }
@@ -87,6 +109,7 @@ public:
 
    Double_t GetGeoQEnergy();
    XYZPoint GetLastPoint();
+   XYZPoint GetFirstPoint();
    static Double_t GetLinearRange(const XYZPoint &vertex, const XYZPoint &maxPos);
 
    void SortHitArrayTime();

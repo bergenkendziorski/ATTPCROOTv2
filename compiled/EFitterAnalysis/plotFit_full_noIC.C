@@ -123,6 +123,7 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
    TH2F *ELossvsBrho = new TH2F("ELossvsBrho", "ELossvsBrho", 4000, 0, 4000, 1000, 0, 10);
    TH2F *ELossvsBrhoZoom = new TH2F("ELossvsBrhoZoom", "ELossvsBrhoZoom", 4000, 0, 20000, 1000, 0, 10);
    TH2F *dedxvsBrho = new TH2F("dedxvsBrho", "dedxvsBrho", 4000, 0, 100000, 1000, 0, 10);
+   TH2F *dedxvsBrhoCond = new TH2F("dedxvsBrhoCond", "dedxvsBrhoCond", 4000, 0, 100000, 1000, 0, 10);
    TH2F *dedxvsBrhoZoom = new TH2F("dedxvsBrhoZoom", "dedxvsBrhoZoom", 4000, 0, 1000, 1000, 0, 10);
 
    TH2F *multvsnumpoints = new TH2F("multvsnumpoints", "multvsnumpoints", 10, 0, 10, 500, 0, 500);
@@ -462,10 +463,22 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
 
                  std::cout<<"\n";*/
 
-            auto itMax =
+	    //Get the track with maximum angle 
+	    auto itMax =
                std::max_element(APRAVec->begin(), APRAVec->end(), [](const auto &a, const auto &b) { return b > a; });
             Int_t maxAIndex = std::distance(APRAVec->begin(), itMax);
             ;
+
+	    //Calculate mean distance to vertex (0,0) of each track
+	    Double_t meanDist = 0.0;
+	    for(auto index =0; index<xiniPRAVec->size();++index)
+	      {
+		Double_t x = (*xiniPRAVec)[index];
+		Double_t y = (*yiniPRAVec)[index];
+		Double_t z = (*ziniPRAVec)[index];
+		meanDist+= TMath::Sqrt(x*x+y*y);
+	      }
+	    meanDist/=xiniPRAVec->size();
 
             for (auto index = 0; index < EFitVec->size(); ++index) {
 
@@ -478,7 +491,11 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
                Ang_Ener_PRA->Fill(APRA, EPRA);
                PhiPRAH->Fill(PhiPRA);
 
-               // if((*lengthOrbZVec)[index]<30)
+
+	       
+	       
+
+	       // if((*lengthOrbZVec)[index]<30)
                // continue;
 
                // if((*brhoVec)[index]>0.8)
@@ -487,8 +504,8 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
                // if((*eLossADC)[index]>50)
                // continue;
 
-               // if((*AFitVec)[index]>82 || (*AFitVec)[index]<74)
-               // continue;
+               // if((*AFitVec)[index]>82 || (*AFitVec)[index]<70)
+		  // continue;
 
                // Particle ID
                ELossvsBrho->Fill((*eLossADC)[index], (*brhoVec)[index]);
@@ -504,11 +521,11 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
                // if(!cutDEDX->IsInside((*dEdxADC)[index], (*brhoVec)[index]))
                // continue;
 
-               if ((*dEdxADC)[index] < 3000) // particleID
-                  continue;
+               //if ((*dEdxADC)[index] < 3000) // particleID
+		 //continue;
 
-               // if ((*trackLengthVec)[index] < 0.0 || (*trackLengthVec)[index] > 25.0)
-               // continue;
+	       //if ((*trackLengthVec)[index] < 14.0 || (*trackLengthVec)[index] > 28.0)
+	       //continue;
 
                if ((*fitConvergedVec)[index] == 0)
                   continue;
@@ -516,14 +533,14 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
                // if((*trackPointsVec)[index]<20)
                // continue;
 
-               if (evMult > 2)
-                  continue;
+               //if (evMult != 3)
+	       //continue;
 
                // if ((*POCAXtrVec)[index] > 2000.0)
                // continue;
 
                if ((*ziniFitVec)[index] < 10.0 || (*ziniFitVec)[index] > 60.0)
-                  continue;
+		    continue;
 
                /*if ((*EFitVec)[index] > 100)
                      continue;
@@ -534,7 +551,9 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
                     if ((*xiniFitVec)[index] < -1000.0)
                     continue;*/
 
-               Double_t angle = (*AFitVec)[index];
+	       dedxvsBrhoCond->Fill((*dEdxADC)[index], (*brhoVec)[index]);
+	       
+	       Double_t angle = (*AFitVec)[index];
                if (dataFile.find("sim") != std::string::npos) {
                   angle = (*AFitVec)[index];
                }
@@ -543,12 +562,7 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
                   hARecvsASca->Fill((*AFitVec)[0], (*AFitVec)[1]);
                }
 
-               // List of events
-               outputFileEvents << dataFile << " - Event : " << i << " - PRA Multiplicity : " << praMult
-                                << " - Max angle PRA : " << (*APRAVec)[index]
-                                << " - Max Angle Fit : " << (*AFitVec)[index]
-                                << " - Track points : " << (*trackPointsVec)[index] << "\n";
-
+               
                // Chi2
                fChi2H->Fill((*fChi2Vec)[index]);
                bChi2H->Fill((*bChi2Vec)[index]);
@@ -566,7 +580,15 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
                Double_t ex_energy_exp_xtr =
                   kine_2b(m_O16, m_a, m_b, m_B, Ebeam_buff, angle * TMath::DegToRad(), (*EFitXtrVec)[index]);
 
-               HQval->Fill(ex_energy_exp);
+	       // List of events
+               outputFileEvents << dataFile << " - Event : " << i << " - PRA Multiplicity : " << praMult
+                                << " - Max angle PRA : " << (*APRAVec)[index]
+                                << " - Max Angle Fit : " << (*AFitVec)[index]
+				<< " - Q value       : " << ex_energy_exp
+                                << " - Track points : " << (*trackPointsVec)[index] << "\n";
+	       
+	       
+	       HQval->Fill(ex_energy_exp);
                HQval_Xtr->Fill(ex_energy_exp_xtr);
                HQval_Xtr_recalc->Fill(ex_energy_exp);
 
@@ -667,6 +689,8 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
                   double Qdep = kine_2b(m_O16, m_a, m_b, m_B, iEb, angle * TMath::DegToRad(), (*EFitVec)[index]);
                   QvsEb->Fill(Qdep, iEb);
                }
+
+	       
 
                // HQval->Fill(Ex);
             }
@@ -911,18 +935,20 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
    fOrbLengthvsMomLoss->Draw();
 
    TCanvas *cpid = new TCanvas();
-   cpid->Divide(2, 2);
-   cpid->Draw();
+   cpid->Divide(2, 3);
+   cpid->Draw("zcol");
    cpid->cd(1);
-   ELossvsBrho->Draw();
+   ELossvsBrho->Draw("zcol");
    cpid->cd(2);
-   ELossvsBrhoZoom->Draw();
+   ELossvsBrhoZoom->Draw("zcol");
    cutT->Draw("l");
    cpid->cd(3);
-   dedxvsBrho->Draw();
+   dedxvsBrho->Draw("zcol");
    cutDEDX->Draw("l");
    cpid->cd(4);
-   dedxvsBrhoZoom->Draw();
+   dedxvsBrhoZoom->Draw("zcol");
+   cpid->cd(5);
+   dedxvsBrhoCond->Draw("zcol");
 
    TCanvas *c7 = new TCanvas();
    c7->Divide(1, 2);
@@ -937,6 +963,9 @@ void plotFit_full_noIC(std::string fileFolder = "data_160_160/")
    // Kine_AngRec_EnerRec_dp_first->Draw("ZCOL SAME");
    c7->cd(2);
    PhiPRAH->Draw();
+
+   TCanvas *c8 = new TCanvas();
+   QvsEb->Draw("zcol");
 
    /*TCanvas *c2 = new TCanvas();
    c2->Divide(2, 3);

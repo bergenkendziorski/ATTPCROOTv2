@@ -2,6 +2,7 @@
 
 #include "AtAuxPad.h"
 #include "AtFilter.h"
+#include "AtPadReference.h" // for operator<<
 #include "AtRawEvent.h"
 
 #include <FairLogger.h>
@@ -14,10 +15,13 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <unordered_map> // for _Node_iterator, operator!=, unordered_map
 #include <utility>
 #include <vector>
 
 class AtPad;
+
+ClassImp(AtFilterTask);
 
 AtFilterTask::AtFilterTask(AtFilter *filter, const char *name)
    : FairTask(name), fOutputEventArray(new TClonesArray("AtRawEvent")), fFilter(filter)
@@ -68,9 +72,16 @@ void AtFilterTask::Exec(Option_t *opt)
          fFilter->Filter(pad);
       }
 
-   // This is destroying data in next pad in the array
-   for (auto &pad : filteredEvent->fPadList)
-      fFilter->Filter(pad.get());
+   if (fFilterFPN)
+      for (auto &[ref, pad] : filteredEvent->fFpnMap) {
+         LOG(debug) << "Filtering " << ref;
+         AtPadReference padRef = ref;
+         fFilter->Filter(&pad, &padRef);
+      }
+
+   if (fFilterPads)
+      for (auto &pad : filteredEvent->fPadList)
+         fFilter->Filter(pad.get());
 
    auto isGood = filteredEvent->IsGood() && fFilter->IsGoodEvent();
    filteredEvent->SetIsGood(isGood);

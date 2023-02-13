@@ -16,29 +16,6 @@ constexpr auto cGREEN = "\033[1;32m";
 ClassImp(AtTrack);
 
 /**
- * @brief ADL-findable swap for AtTrack.
- *
- * Implemented as a friend free function to enable ADL of swap.
- * (https://en.cppreference.com/w/cpp/language/adl)
- */
-void swap(AtTrack &a, AtTrack &b) noexcept
-{
-   using std::swap; // Enable ADL
-
-   swap(a.fTrackID, b.fTrackID);
-   swap(a.fHitArray, b.fHitArray);
-   swap(a.fHitClusterArray, b.fHitClusterArray);
-   swap(a.fPattern, b.fPattern);
-   swap(a.fIsMerged, b.fIsMerged);
-   swap(a.fVertexToZDist, b.fVertexToZDist);
-
-   swap(a.fGeoThetaAngle, b.fGeoThetaAngle);
-   swap(a.fGeoPhiAngle, b.fGeoPhiAngle);
-   swap(a.fGeoRadius, b.fGeoRadius);
-   swap(a.fGeoCenter, b.fGeoCenter);
-}
-
-/**
  * @brief Copy assignment using copy-swap idiom.
  *
  */
@@ -73,6 +50,20 @@ XYZPoint AtTrack::GetLastPoint()
       }
    }
    return maxPos;
+}
+
+XYZPoint AtTrack::GetFirstPoint()
+{
+   Double_t minR = 999.;
+   XYZPoint minPos;
+   for (auto &nHit : fHitArray) {
+      auto temp = nHit.GetPosition();
+      if (temp.Rho() < minR) {
+         minR = temp.Rho();
+         minPos = temp;
+      }
+   }
+   return minPos;
 }
 
 Double_t AtTrack::GetMeanTime()

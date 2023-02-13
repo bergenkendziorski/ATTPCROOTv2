@@ -64,6 +64,8 @@
 #include <thread>
 #include <vector>
 
+enum Exp { e20020, e20009 };
+
 struct trackSegment {
    Double_t eLoss;
    TVector3 iniPos;
@@ -115,12 +117,14 @@ public:
    Bool_t SetInputFile(TString &file, std::size_t firstEve, std::size_t lastEve);
    Bool_t SetOutputFile(TString &file);
    void SetFitDirection(Int_t direction) { fFitDirection = direction; }
+   void SetExpNum(Exp exp) { fExpNum = exp; }
 
    // Getters
    std::shared_ptr<TTreeReader> GetReader() { return fReader; }
    AtPatternEvent *GetPatternEve() { return (AtPatternEvent *)fPatternEveArray->Get()->At(0); }
    AtEvent *GetEve() { return (AtEvent *)fEveArray->Get()->At(0); }
    void GetAuxiliaryChannels(const std::vector<AtAuxPad> &auxPadArray);
+   Exp GetExpNum() { return fExpNum; }
 
    // File management
    void ClearTree();
@@ -158,6 +162,7 @@ private:
    std::vector<AtTools::IonFitInfo> *ionList;
    AtTools::AtParsers fParser;
    std::unique_ptr<AtTools::AtTrackTransformer> fTrackTransformer;
+   Exp fExpNum;
 
    genfit::EventDisplay *display;
 
@@ -177,6 +182,9 @@ private:
                        std::vector<trackSegment> &segments);
    Bool_t CompareTracks(AtTrack *trA, AtTrack *trB);
    Bool_t CheckOverlap(AtTrack *trA, AtTrack *trB);
+   Bool_t CheckAngles(AtTrack *trA, AtTrack *trB);
+   Double_t CenterDistance(AtTrack *trA, AtTrack *trB);
+   std::vector<AtTrack *> FindSingleTracks(std::vector<AtTrack *> &tracks);
 
 public:
    // Output tree format (TODO: To be moved to other src file)

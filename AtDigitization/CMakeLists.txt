@@ -13,6 +13,7 @@ Set(DEPENDENCIES
   ATTPCROOT::AtParameter
   ATTPCROOT::AtData
   ATTPCROOT::AtMap
+  ATTPCROOT::AtTools
 )
 
 set(SRCS
@@ -25,6 +26,7 @@ AtSimulatedPoint.cxx
 AtSimulatedLine.cxx
 AtTrigger.cxx
 AtTriggerTask.cxx
+AtVectorResponse.cxx
 )
 
 generate_target_and_root_library(${LIBRARY_NAME}

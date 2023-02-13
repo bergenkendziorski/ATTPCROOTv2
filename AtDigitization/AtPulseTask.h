@@ -16,9 +16,12 @@
 #include <TH1.h> //Needed for unique_ptr<TH1F>
 
 #include <cstddef>
+#include <functional> // for function
 #include <iterator>
 #include <map>
 #include <memory>
+#include <type_traits> // for add_pointer_t
+#include <utility>     // for move
 #include <vector>
 
 class AtMap;
@@ -34,23 +37,30 @@ class AtPulseTask : public FairTask {
 protected:
    using AtMapPtr = std::shared_ptr<AtMap>;
    using ResponseFunctionType = std::add_pointer_t<double(double)>;
+   /// Function (or callable object) to use as the response function. Parameters are padNum and time (us)
+   using ResponseFunc = std::function<double(int, double)>;
 
    AtMapPtr fMap; //!< AtTPC map
 
    Int_t fEventID = 0;          //! EventID
    Double_t fGain = 0;          //! Micromegas gain.
    Double_t fLowGainFactor = 0; //! If pad is AtMap::kLowGain multiply gain by this factor
-   Double_t fGETGain = 0;       //! GET Gain.
+   Double_t fGETGain = 0;       //! GET Gain (ADC ch/electron).
    Double_t fPeakingTime = 0;   //! Electronic peaking time in us
    Double_t fTBTime = 0;        //! Time bucket size in us
    Int_t fNumTbs{512};          //! Number of time buckers
    Int_t fTBEntrance = 0;       //! Window location in timebuckets (from config)
    Int_t fTBPadPlane = 0;       //! Pad plane location in TBs (calculated from DriftVelocity, TBEntrance, ZPadPlane
-   ResponseFunctionType fResponseFunction{&(AtPulseTask::nominalResponseFunction)};
 
-   Bool_t fIsPersistent = true;  //!< If true, save container
-   Bool_t fIsSaveMCInfo = false; //!<< Propagates MC information
+   ResponseFunc fResponse{nullptr}; //! Response function of the electronics
+
+   Double_t fNoiseSigma = 0; //! Sigma of random gaussian noise to apply to trace
+
+   Bool_t fIsPersistent = true;            //!< If true, save container
+   Bool_t fIsPersistentAtTpcPoint = false; //!< If true, save container
+   Bool_t fIsSaveMCInfo = false;           //!<< Propagates MC information
    Bool_t fUseFastGain = true;
+   Bool_t fUseChargeSave = false;
 
    TClonesArray *fSimulatedPointArray{}; //!< drifted electron array (input)
    TClonesArray fRawEventArray;          //!< Raw Event array(only one)
@@ -73,17 +83,17 @@ public:
 
    void SetLowGainFactor(Double_t factor) { fLowGainFactor = factor; }
    void SetPersistence(Bool_t val) { fIsPersistent = val; }
+   void SetPersistenceAtTpcPoint(Bool_t val) { fIsPersistentAtTpcPoint = val; }
    void SetSaveMCInfo() { fIsSaveMCInfo = kTRUE; }
    void SetMap(AtMapPtr map) { fMap = map; };
    void UseFastGain(Bool_t val) { fUseFastGain = val; }
+   void UseChargeSave(Bool_t val) { fUseChargeSave = val; }
+   void SetNoiseSigma(double val) { fNoiseSigma = val; }
 
-   /**
-    * @brief: Set the response funtion of the electronics for a single electron.
-    *
-    * @param[in] responseFunction Function pointer of the type `double responseFunction(double reducedTime)` where
-    * reducedTime is the time since the arrival of the electron divided by the electronics peaking time.
-    */
-   void SetResponseFunction(ResponseFunctionType responseFunction) { fResponseFunction = responseFunction; }
+   [[deprecated("Use SetResponse() instead which requires the time as a parameter instead of reduced time")]] void
+   SetResponseFunction(ResponseFunctionType responseFunction);
+
+   void SetResponse(ResponseFunc func) { fResponse = std::move(func); }
 
    virtual InitStatus Init() override;        //!< Initiliazation of task at the beginning of a run.
    virtual void Exec(Option_t *opt) override; //!< Executed for each event.
@@ -91,7 +101,7 @@ public:
 
 protected:
    void saveMCInfo(int mcPointID, int padNumber, int trackID);
-   void setParameters();
+   void setParameters(bool verbose = true);
    void getPadPlaneAndCreatePadHist();
    void reset();
    void generateTracesFromGatheredElectrons();

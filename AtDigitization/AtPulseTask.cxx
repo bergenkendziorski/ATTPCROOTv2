@@ -1,9 +1,12 @@
 #include "AtPulseTask.h"
 
 #include "AtDigiPar.h"
+#include "AtElectronicResponse.h"
 #include "AtMCPoint.h"
 #include "AtMap.h"
 #include "AtPad.h"
+#include "AtPadArray.h"
+#include "AtPadBase.h"
 #include "AtRawEvent.h"
 #include "AtSimulatedPoint.h"
 
@@ -24,7 +27,7 @@
 #include <TObject.h>
 #include <TRandom.h>
 
-#include <algorithm> // for max
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <iostream>
@@ -35,12 +38,26 @@ constexpr auto cYELLOW = "\033[1;33m";
 constexpr auto cNORMAL = "\033[0m";
 constexpr auto cGREEN = "\033[1;32m";
 
+using namespace ElectronicResponse;
 AtPulseTask::AtPulseTask() : AtPulseTask("AtPulseTask") {}
 AtPulseTask::AtPulseTask(const char *name) : FairTask(name), fRawEventArray(TClonesArray("AtRawEvent", 1)) {}
 
 void AtPulseTask::SetParContainers() {}
 
-void AtPulseTask::setParameters()
+/**
+ * @brief: Set the response funtion of the electronics for a single electron.
+ *
+ * @param[in] responseFunction Function pointer of the type `double responseFunction(double reducedTime)` where
+ * reducedTime is the time since the arrival of the electron divided by the electronics peaking time.
+ */
+void AtPulseTask::SetResponseFunction(ResponseFunctionType responseFunction)
+{
+   LOG(warning) << "AtPulseTask::SetResponseFunction is deprecated and must be called after Init()";
+   setParameters(false);
+   fResponse = AtReducedTimeResponse(fPeakingTime, responseFunction);
+}
+
+void AtPulseTask::setParameters(bool verbose)
 {
    auto fPar = dynamic_cast<AtDigiPar *>(FairRunAna::Instance()->GetRuntimeDb()->getContainer("AtDigiPar"));
    fGain = fPar->GetGain();
@@ -57,15 +74,15 @@ void AtPulseTask::setParameters()
    //  1.6e-19*4096/240e-15 = 2.731e-03
    //  1.6e-19*4096/1e-12 = 6.5536e-04
    //  1.6e-19*4096/10e-12 = 6.5536e-05
-
-   std::cout << "  Gain in AtTPC gas: " << fGain << std::endl;
-   std::cout << "  GET Gain: " << fGETGain << std::endl;
-   std::cout << "  Electronic peaking time: " << fPeakingTime << " us" << std::endl;
-   std::cout << "  Number of pads: " << fMap->GetNumPads() << std::endl;
-   std::cout << "  Number of TBs: " << fNumTbs << std::endl;
-   std::cout << "  Window at TB: " << fTBEntrance << std::endl;
-   std::cout << "  Pad plane at TB: " << fTBPadPlane << std::endl;
-
+   if (verbose) {
+      std::cout << "  Gain in AtTPC gas: " << fGain << std::endl;
+      std::cout << "  GET Gain: " << fGETGain << std::endl;
+      std::cout << "  Electronic peaking time: " << fPeakingTime << " us" << std::endl;
+      std::cout << "  Number of pads: " << fMap->GetNumPads() << std::endl;
+      std::cout << "  Number of TBs: " << fNumTbs << std::endl;
+      std::cout << "  Window at TB: " << fTBEntrance << std::endl;
+      std::cout << "  Pad plane at TB: " << fTBPadPlane << std::endl;
+   }
    gain = std::make_unique<TF1>("gain",
                                 "pow([1]+1,[1]+1)/ROOT::Math::tgamma([1]+1)*pow((x/[0]),[1])*exp(-([1]+1)*(x/[0]))", 0,
                                 fGain * 5); // Polya distribution of gain
@@ -77,8 +94,8 @@ void AtPulseTask::setParameters()
    avgGainDeviation *=
       TMath::Sqrt(TMath::Gamma(b + 3) / TMath::Gamma(b + 1) -
                   TMath::Gamma(b + 2) * TMath::Gamma(b + 2) / TMath::Gamma(b + 1) / TMath::Gamma(b + 1));
-
-   std::cout << "  GET gain deviation: " << avgGainDeviation << std::endl;
+   if (verbose)
+      std::cout << "  Gas gain deviation: " << avgGainDeviation << std::endl;
 }
 
 void AtPulseTask::getPadPlaneAndCreatePadHist()
@@ -112,6 +129,9 @@ InitStatus AtPulseTask::Init()
    ioman->Register("AtRawEvent", "cbmsim", &fRawEventArray, fIsPersistent);
 
    setParameters();
+   if (fResponse == nullptr)
+      fResponse = AtNominalResponse(fPeakingTime);
+
    getPadPlaneAndCreatePadHist();
    fEventID = 0;
    fRawEvent = nullptr;
@@ -122,6 +142,8 @@ InitStatus AtPulseTask::Init()
       LOG(error) << "Cannot find fMCPointArray array!";
       return kERROR;
    }
+
+   ioman->Register("AtTpcPoint", "cbmsim", fMCPointArray, fIsPersistentAtTpcPoint);
 
    LOG(info) << " AtPulseTask : Initialization of parameters complete!";
    return kSUCCESS;
@@ -236,17 +258,17 @@ void AtPulseTask::generateTracesFromGatheredElectrons()
       Int_t thePadNumber = (ite2.first);
 
       for (Int_t kk = 0; kk < fNumTbs; kk++) {
-         if (eleAccumulated[thePadNumber]->GetBinContent(kk) > 0) {
+         if (eleAccumulated[thePadNumber]->GetBinContent(kk + 1) > 0) {
             for (Int_t nn = kk; nn < fNumTbs; nn++) {
-               Double_t binCenter = axis->GetBinCenter(kk);
-               Double_t factor = (((((Double_t)nn) + 0.5) * binWidth) - binCenter) / fPeakingTime;
-               signal[nn] += eleAccumulated[thePadNumber]->GetBinContent(kk) * fResponseFunction(factor);
+               Double_t binCenter = axis->GetBinCenter(kk + 1);
+               double time = (((Double_t)nn + 0.5) * binWidth) - binCenter;
+               signal[nn] += eleAccumulated[thePadNumber]->GetBinContent(kk + 1) * fResponse(thePadNumber, time);
             }
          }
       }
 
       // Create pad
-      auto pad = fRawEvent->AddPad(thePadNumber);
+      AtPad *pad = fRawEvent->AddPad(thePadNumber);
 
       auto PadCenterCoord = fMap->CalcPadCenter(thePadNumber);
       pad->SetValidPad(kTRUE);
@@ -255,9 +277,19 @@ void AtPulseTask::generateTracesFromGatheredElectrons()
 
       auto lowGain = fMap->IsInhibited(thePadNumber) == AtMap::InhibitType::kLowGain ? fLowGainFactor : 1;
 
+      auto charge = std::make_unique<AtPadArray>();
+
       for (Int_t bin = 0; bin < fNumTbs; bin++) {
-         pad->SetADC(bin, signal[bin] * fGETGain * lowGain); // NOLINT
+         auto adc = signal[bin] * fGETGain * lowGain;
+         if (fNoiseSigma != 0)
+            adc += gRandom->Gaus(0, fNoiseSigma);
+         pad->SetADC(bin, adc); // NOLINT
+         if (fUseChargeSave)
+            charge->SetArray(bin, eleAccumulated[thePadNumber]->GetBinContent(bin + 1));
       }
+
+      if (fUseChargeSave)
+         pad->AddAugment("Q", std::move(charge));
    }
 
    // if electronsMap.size==0, fEventID still needs to be set

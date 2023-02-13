@@ -1,45 +1,49 @@
 #ifndef ATDATAREDUCTIONTSAK_H
 #define ATDATAREDUCTIONTSAK_H
-/*
- * Task to reduce the data. It takes a function pointer of the type:
- * bool func(AtRawEvent*)
- * If the function returns true, it keeps the event. Otherwise it skips writing
- * it to disk
- *
- *
- *
- */
 
 #include <FairTask.h>
 
 #include <Rtypes.h>
 #include <TString.h>
 
-#include <type_traits>
+#include <functional> // for function
+#include <utility>    // for move
 
 class AtRawEvent;
 class TClonesArray;
+class TBuffer;
+class TClass;
+class TMemberInspector;
 
+/**
+ * Task to reduce the data. It takes a function pointer of the type:
+ * bool func(AtRawEvent*)
+ * If the function returns true, it keeps the event. Otherwise it skips writing
+ * it to disk and sets AtRawEvent.fIsGood as false.
+ *
+ */
 class AtDataReductionTask : public FairTask {
-   // using funcType = bool (*)(AtRawEvent*);
-   using funcType = std::add_pointer<bool(AtRawEvent *)>::type;
-
 private:
-   funcType reduceFunc;
+   using ReductionFunction = std::function<bool()>;
 
-   TClonesArray *fInputEventArray{}; // AtRawEvent
-   TString fInputBranchName;         // Name if AtRawEvent branch
-   AtRawEvent *fRawEvent{};
+   ReductionFunction fReductionFunc{nullptr};
+
+   TClonesArray *fInputEventArray{nullptr}; //< AtRawEvent branch object
+   TString fInputBranchName{"AtRawEvent"};  //< Name of AtRawEvent branch to mark as good/not good
+   AtRawEvent *fRawEvent{};                 //< Event to mark as good
 
 public:
-   AtDataReductionTask();
-   ~AtDataReductionTask();
+   AtDataReductionTask() = default;
+   ~AtDataReductionTask() = default;
 
-   void SetReductionFunction(funcType func) { reduceFunc = func; }
+   void SetReductionFunction(ReductionFunction func) { fReductionFunc = std::move(func); }
+   void SetReductionFunction(std::function<bool(AtRawEvent *)> func);
    void SetInputBranch(TString inputBranch) { fInputBranchName = inputBranch; }
 
    virtual InitStatus Init() override;
    virtual void Exec(Option_t *opt) override;
+
+   ClassDefOverride(AtDataReductionTask, 2)
 };
 
 #endif //#ifndef ATDATAREDUCTIONTSAK_H

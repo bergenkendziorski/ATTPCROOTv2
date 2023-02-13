@@ -32,32 +32,32 @@ int Mainrel()
    kineStr.open("Kine.txt");
 
    Int_t a = 1;
-   int A1 = 16.; // mass0 of the incident particle
-   int Z1 = 8.;  // charge of the incident particle
+   int A1 = 10.; // mass0 of the incident particle
+   int Z1 = 4.;  // charge of the incident particle
    char *El1 = new char[2];
 
    // double m1=77.963180;
 
    // cout<<El1<<endl;
 
-   int A2 = 4.; // mass0 of the target
-   int Z2 = 2.; // charge of the target
+   int A2 = 2.; // mass0 of the target
+   int Z2 = 1.; // charge of the target
    char *El2 = new char[2];
 
    // double m2=2.0141;
 
    // cout<<El2<<endl;
 
-   int A3 = 16; // mass0 of the scattered particle
-   int Z3 = 8;  // charge of the scattered particle
+   int A3 = 10; // mass0 of the scattered particle
+   int Z3 = 4;  // charge of the scattered particle
    char *El3 = new char[2];
 
    // double m3=78.971987;
 
    // cout<<El3<<endl;
 
-   int A4 = 4; // mass0 of the recoil
-   int Z4 = 2; // charge of the recoil
+   int A4 = 2; // mass0 of the recoil
+   int Z4 = 1; // charge of the recoil
    char *El4 = new char[2];
 
    // double m4=1.007825;
@@ -72,12 +72,12 @@ int Mainrel()
    int ZD2 = 2; // charge of the daugther 2
    char *ElD2 = new char[2];
 
-   double ex1 = 0;   // excitation energy of the incident particle
-   double ex2 = 0;   // excitation energy of the target
-   double ex3 = 0.0; // excitation energy of the scattered particle
-   double ex4 = 0.0; // excitation energy of the recoil
+   double ex1 = 0;     // excitation energy of the incident particle
+   double ex2 = 0;     // excitation energy of the target
+   double ex3 = 7.542; // excitation energy of the scattered particle
+   double ex4 = 0.0;   // excitation energy of the recoil
 
-   double tbt = 11.0; // incident energy (total Lab energy in MeV)
+   double tbt = 9.05; // incident energy (total Lab energy in MeV)
 
    double Energyrdec, Anglerdec;
 
