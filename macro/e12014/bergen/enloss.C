@@ -10,13 +10,13 @@
 
 //function declarations:
 void enlos();
-void open_table();
+void open_table_old();
 
 //variable declarations:
 
 void enloss()
 {
-   open_table();
+   //open_table();
 
    int num_points = 10;
    int eloss = 0;
@@ -29,11 +29,12 @@ void enloss()
       eloss = 5;
       energy1 -= eloss;
    }
+   
 
    //auto gen = new AtTPCFissionGeneratorV3();
 }
 
-void open_table()
+void open_table_old()
 {
    vector<vector<double>> content;
    vector<double> row;
