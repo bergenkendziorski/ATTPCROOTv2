@@ -94,7 +94,7 @@ void run_eve_sim(TString species = "Bi200", int pressure = 150,
       ions.push_back({i, std::round((double)i / 85 * 204)});
    for (auto [Z, A] : ions) {
       auto eloss = std::make_shared<AtTools::AtELossTable>();
-      eloss->LoadLiseTable(TString::Format("./eLoss/%d_%d.txt", Z, A).Data(), A, 0);
+      eloss->LoadSrimTable(TString::Format("./eLoss/SRIM/%d_%d.txt", Z, A).Data());
       sim->AddModel(Z, A, eloss);
    }
 
@@ -102,7 +102,7 @@ void run_eve_sim(TString species = "Bi200", int pressure = 150,
    pulse = std::make_shared<AtPulseLine>(fMap);
    pulse->SetSaveCharge(true);
    pulse->SetDoConvolution(false);
-   pulse->SetNumIntegrationPoints(250);
+   pulse->SetNumIntegrationPoints(750);
 
    fitter = std::make_shared<MCFitter::AtMCFission>(sim, cluster, pulse);
    fitter->SetTimeEvent(true);
