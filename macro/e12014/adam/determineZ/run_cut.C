@@ -52,12 +52,13 @@ string to_string(ChargeObj obj)
  * Macro for running the MCFit code applying some cut given the following compount nucleus
  * This WILL overwrite data if you are not carful.
  */
-int Zcn = 83 + 2;
-int Acn = 200 + 4;
-int Zmin = 26;
+int Zcn = 82 + 2;   //changing-Bergen
+int Acn = 197 + 4;  //changing-Bergen
+int Zmin = 25;
 int Zmax = 59;
 
-void run_cut(TString cutName = "cut1", TString species = "Bi200", int pressure = 150, bool lise = true,
+//changing species and pressure-Bergen
+void run_cut(TString cutName = "cut1", TString species = "Pb197", int pressure = 150, bool lise = true,
              ChargeObj obj = kChi2)
 {
 

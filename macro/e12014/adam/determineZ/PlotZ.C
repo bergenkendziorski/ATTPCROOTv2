@@ -158,6 +158,8 @@ void PlotRange(double min, double max, double step)
 void PlotZ(bool draw = true)
 {
    TH1::SetDefaultSumw2();
+
+   // change commenting-Bergen
    // TString fileName = "/mnt/analysis/e12014/TPC/150Torr_nomod/cut1/SRIM/Bi200Diff2.root";
    TString fileName = "/mnt/analysis/e12014/TPC/150Torr_yFit/cut1/SRIM/Bi200Chi2.root";
    //  TString fileName = "/mnt/analysis/e12014/TPC/150Torr_yFit/cut1/LISE/Bi200Chi2.root";
