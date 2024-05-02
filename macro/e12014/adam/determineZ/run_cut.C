@@ -3,13 +3,15 @@
 bool cut1(AtFissionEvent *evt)
 {
    // Get the upper angle cut
+   // Changing for different beams -Bergen
    if (evt == nullptr)
       return false;
    auto vZ = evt->GetVertex().Z();
    if (vZ < 200 || vZ > 955)
       return false;
 
-   // Bi200
+   // Bi200 original upper values .58,955,.2, 755
+   // Bi200 original lower values .46,955,.2,755
    double upper = 0.58 + (955 - vZ) * .2 / 755;
    double lower = 0.46 + (955 - vZ) * .2 / 755;
 
@@ -52,13 +54,13 @@ string to_string(ChargeObj obj)
  * Macro for running the MCFit code applying some cut given the following compount nucleus
  * This WILL overwrite data if you are not carful.
  */
-int Zcn = 82 + 2;   //changing-Bergen
-int Acn = 197 + 4;  //changing-Bergen
-int Zmin = 25;
-int Zmax = 59;
+int Zcn = 83 + 2;   //changing-Bergen
+int Acn = 199 + 4;  //changing-Bergen
+int Zmin = 26; //changing-Bergen
+int Zmax = 59; //changing-Bergen
 
 //changing species and pressure-Bergen
-void run_cut(TString cutName = "cut1", TString species = "Pb197", int pressure = 150, bool lise = true,
+void run_cut(TString cutName = "cut1", TString species = "Bi199", int pressure = 150, bool lise = true,
              ChargeObj obj = kChi2)
 {
 
