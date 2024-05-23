@@ -7,7 +7,7 @@
 */
 #include "FairLogger.h"
 
-void run_eve_cut(TString cut = "cut1", TString species = "Bi200", int pressure = 150, bool lise = false,
+void run_eve_cut(TString cut = "cut1", TString species = "Bi200", int pressure = 150, bool lise = true,
                  TString OutputDataFile = "./data/output.reco_display.root")
 {
 
