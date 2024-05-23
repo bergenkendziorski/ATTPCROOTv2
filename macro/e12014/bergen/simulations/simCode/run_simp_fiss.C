@@ -105,7 +105,7 @@ void run_simp_fiss(int runNum = 0)
 
    timer.Start();
    // fRun->Run(0, 20001);
-   fRun->Run(0, 10000);
+   fRun->Run(0, 1000); //was originally 10000, but I don't need that many
    simEvent::CleanUp();
    timer.Stop();
 
