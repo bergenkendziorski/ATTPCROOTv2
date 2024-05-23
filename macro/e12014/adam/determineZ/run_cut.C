@@ -54,13 +54,13 @@ string to_string(ChargeObj obj)
  * Macro for running the MCFit code applying some cut given the following compount nucleus
  * This WILL overwrite data if you are not carful.
  */
-int Zcn = 83 + 2;   //changing-Bergen
-int Acn = 199 + 4;  //changing-Bergen
+int Zcn = 84 + 2;   //changing-Bergen
+int Acn = 202 + 4;  //changing-Bergen
 int Zmin = 26; //changing-Bergen
-int Zmax = 59; //changing-Bergen
+int Zmax = 60; //changing-Bergen
 
 //changing species and pressure-Bergen
-void run_cut(TString cutName = "cut1", TString species = "Bi199", int pressure = 150, bool lise = true,
+void run_cut(TString cutName = "cut1", TString species = "Po202", int pressure = 150, bool lise = true,
              ChargeObj obj = kChi2)
 {
 
@@ -131,14 +131,21 @@ void run_cut(TString cutName = "cut1", TString species = "Bi199", int pressure =
    std::vector<std::pair<int, int>> ions;
    for (int i = Zmin; i <= Zmax; i++)
       ions.push_back({i, std::round((double)i / Zcn * Acn)});
+   //ions.push_back({42,100});
+   //ions.push_back({25,60});
    for (auto [Z, A] : ions) {
       auto eloss = std::make_shared<AtTools::AtELossTable>();
       if (lise)
+	 {
+	 std::cout << "Starting read in for " << Z << " " << A << std::endl;
          eloss->LoadLiseTable(TString::Format("./eLoss/LISE/%d_%d.txt", Z, A).Data(), A, 0);
+	 std::cout << "Ended read in for " << Z << " " << A << std::endl;
+	 }
       else
          eloss->LoadSrimTable(TString::Format("./eLoss/SRIM/%d_%d.txt", Z, A).Data());
       sim->AddModel(Z, A, eloss);
    }
+
 
    auto cluster = std::make_shared<AtClusterizeLine>();
    auto pulse = std::make_shared<AtPulseLine>(fMap);
