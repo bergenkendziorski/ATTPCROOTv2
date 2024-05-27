@@ -22,7 +22,7 @@ void run_digi_fiss(int runNum = 0)
 
    // Create the full parameter file paths
    //TString digiParFile = dir + "/parameters/" + paramFile;
-   TString digiParFile = paramFile;
+   TString digiParFile = dir + "/parameters/" + paramFile;
    TString mapParFile = dir + "/scripts/" + scriptfile;
 
    // -----   Timer   --------------------------------------------------------
