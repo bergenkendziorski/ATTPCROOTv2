@@ -41,7 +41,7 @@ void run_simp_fiss(int runNum = 0)
    // Create the full parameter file paths
    //TString digiParFile = dir + "/parameters/" + paramFile;
    TString GeoDataPath = dir + "/geometry/" + geoFile;
-   TString digiParFile = paramFile;
+   TString digiParFile = dir + "/parameters/" + paramFile;
    TString mapParFile = dir + "/scripts/" + scriptfile;
 
    // -----   Timer   --------------------------------------------------------
@@ -80,12 +80,12 @@ void run_simp_fiss(int runNum = 0)
       ions.push_back({i, std::round((double)i / Zcn * Acn)});
    for (auto [Z, A] : ions) {
       auto eloss = std::make_shared<AtTools::AtELossTable>();
-      eloss->LoadLiseTable(TString::Format("../eLoss/LISE/%d_%d.txt", Z, A).Data(), A, 0);
+      eloss->LoadLiseTable(TString::Format("../macro/e12014/bergen/determineZ/eLoss/LISE/%d_%d.txt", Z, A).Data(), A, 0);
       sim->AddModel(Z, A, eloss);
    }
 
       auto beamloss = std::make_shared<AtTools::AtELossTable>();
-      beamloss->LoadLiseTable(TString::Format("../eLoss/LISE/%d_%d.txt", 83, 200).Data(), 200, 0);
+      beamloss->LoadLiseTable(TString::Format("../macro/e12014/bergen/determineZ/eLoss/LISE/%d_%d.txt", 83, 200).Data(), 200, 0);
       sim->AddModel(83, 200, beamloss);
 
    simEvent::moveSim(std::move(sim));
