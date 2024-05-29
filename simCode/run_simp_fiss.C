@@ -12,18 +12,18 @@ void run_simp_fiss(int runNum = 0)
 
    //************ Things to change ************//
    int Zcn = 83 + 2;
-   int Acn = 200 + 4;
+   int Acn = 199 + 4;
    int Zmin = 26;
    int Zmax = 59;
 
    simEvent::beamZ = 83;
-   simEvent::beamA = 200;
-   simEvent::beamM = 199.9332;
+   simEvent::beamA = 199;
+   simEvent::beamM = 198.97767;
    simEvent::massFrac = 0.56; //Probably don't change
    simEvent::massDev = 6; //Probably don't change
 
-   simEvent::beamE = 2.70013e+03; //Get from LISE
-   simEvent::beamEsig = 1.28122e+02; //Either set to 0 or maintain the same ratio with beamE
+   simEvent::beamE = 2930.479; //Get from LISE
+   simEvent::beamEsig = 139.05; //Either set to 0 or maintain the same ratio with beamE
 
    //************ End things to change ************//
 
@@ -85,8 +85,8 @@ void run_simp_fiss(int runNum = 0)
    }
 
       auto beamloss = std::make_shared<AtTools::AtELossTable>();
-      beamloss->LoadLiseTable(TString::Format("../macro/e12014/bergen/determineZ/eLoss/LISE/%d_%d.txt", 83, 200).Data(), 200, 0);
-      sim->AddModel(83, 200, beamloss);
+      beamloss->LoadLiseTable(TString::Format("../macro/e12014/bergen/determineZ/eLoss/LISE/%d_%d.txt", 83, 199).Data(), 199, 0);
+      sim->AddModel(83, 199, beamloss);
 
    simEvent::moveSim(std::move(sim));
    simEvent::ions = ions;

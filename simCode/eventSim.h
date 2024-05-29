@@ -36,8 +36,8 @@ double angMax = TMath::Pi() / 2 + 1;
 TF1 *csFit = nullptr;
 
 int beamZ = 83;
-int beamA = 200;
-double beamM = 199.9332;
+int beamA = 199;
+double beamM = 198.97767;
 float massFrac = 0.56;
 float massDev = 6;
 
@@ -74,8 +74,8 @@ double beamDirY2 = -0.00144553;
 double beamDirYsig1 = 0.00230867;
 double beamDirYsig2 = 0;
 
-double beamE = 2.7000e+03;
-double beamEsig = 1.28122e+02;
+double beamE = 2930.479;
+double beamEsig = 139.05;
 //double beamEsig = 0;
 
 double vertexZ;
