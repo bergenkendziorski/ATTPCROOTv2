@@ -54,10 +54,10 @@ string to_string(ChargeObj obj)
  * Macro for running the MCFit code applying some cut given the following compount nucleus
  * This WILL overwrite data if you are not carful.
  */
-int Zcn = 84 + 2;   //changing-Bergen
-int Acn = 202 + 4;  //changing-Bergen
+int Zcn = 83 + 2;   //changing-Bergen
+int Acn = 188 + 4;  //changing-Bergen
 int Zmin = 26; //changing-Bergen
-int Zmax = 60; //changing-Bergen
+int Zmax = 59; //changing-Bergen
 
 //changing species and pressure-Bergen
 void run_cut(TString cutName = "cut1", TString species = "Bi199", int pressure = 150, bool lise = true,
@@ -69,7 +69,7 @@ void run_cut(TString cutName = "cut1", TString species = "Bi199", int pressure =
    fair::Logger::DefineVerbosity("user1", verbSpec);
    // fair::Logger::SetVerbosity("user1");
    // fair::Logger::SetConsoleSeverity("debug");
-   TString path = "/mnt/analysis/e12014/TPC/%dTorr_yFit";
+   TString path = "/mnt/analysis/e12014/bergen/ATTPCROOTv2/simCode";
    TString InputDataFile = TString::Format(path + "/%s.root", pressure, species.Data());
    TString evtInputDataFile = TString::Format(path + "/%sEvt.root", pressure, species.Data());
 
